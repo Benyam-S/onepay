@@ -7,6 +7,7 @@ type User struct {
 	LastName    string
 	Email       string `gorm:"not null; unique"`
 	PhoneNumber string `gorm:"not null; unique"`
+	ProfilePic  string
 }
 
 // UserPassword is a type that defines a OnePay user password

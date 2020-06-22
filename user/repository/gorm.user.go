@@ -73,7 +73,10 @@ func (repo *UserRepository) Update(opUser *entity.User) (*entity.User, error) {
 		return nil, err
 	}
 
-	repo.conn.Save(opUser)
+	err = repo.conn.Save(opUser).Error
+	if err != nil {
+		return nil, err
+	}
 	return opUser, nil
 }
 
@@ -141,7 +144,10 @@ func (repo *PasswordRepository) Update(opPassword *entity.UserPassword) (*entity
 		return nil, err
 	}
 
-	repo.conn.Save(opPassword)
+	err = repo.conn.Save(opPassword).Error
+	if err != nil {
+		return nil, err
+	}
 	return opPassword, nil
 }
 

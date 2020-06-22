@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/Benyam-S/onepay/dbfiles"
+	"github.com/Benyam-S/onepay/entity"
+	"github.com/Benyam-S/onepay/user/repository"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 )
@@ -18,17 +20,18 @@ func main() {
 
 	dbfiles.Init(db)
 
-	// userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(db)
 	// passwordRepo := repository.NewPasswordRepository(db)
 
-	// tempUser := entity.User{UserID: "OPbB49Kkw2", FirstName: "Benyam", LastName: "Simayehu"}
+	tempUser := entity.User{UserID: "OPMRpo8kn1", FirstName: "Benyam",
+		LastName: "Simayehu", Email: "binysimayehu@gmail.co", PhoneNumber: "+25191173268"}
 	// tempPassword := entity.UserPassword{UserID: "OPh7lTo5t1", Password: "12443", Salt: "123"}
 
-	// user, err := userRepo.Delete("OPh7lTo5t1")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println(user)
+	user, err := userRepo.Update(&tempUser)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(user)
 
 	// password, err := passwordRepo.Delete("OPh7lTo5t1")
 	// if err != nil {
