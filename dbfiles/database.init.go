@@ -1,17 +1,14 @@
 package dbfiles
 
-// User is a type that defines a OnePay user
-type User struct {
-	UserID      string `gorm:"primary_key; unique; not null"`
-	FirstName   string `gorm:"not null"`
-	LastName    string `gorm:"not null"`
-	Email       string `gorm:"not null"`
-	PhoneNumber string `gorm:"not null"`
-}
+import (
+	"github.com/Benyam-S/onepay/entity"
+	"github.com/jinzhu/gorm"
+)
 
-// UserPassword is a type that defines a OnePay user password
-type UserPassword struct {
-	UserID   string `gorm:"primary_key; unique; not null"`
-	Password string `gorm:"not null"`
-	Salt     string `gorm:"not null"`
+// Init is a function that will initialize the OnePay database
+func Init(db *gorm.DB) {
+
+	db.AutoMigrate(&entity.UserPassword{})
+	db.AutoMigrate(&entity.User{})
+	db.Model(&entity.UserPassword{}).AddForeignKey("user_id", "users(user_id)", "CASCADE", "CASCADE")
 }
