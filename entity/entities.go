@@ -16,3 +16,28 @@ type UserPassword struct {
 	Password string `gorm:"not null"`
 	Salt     string `gorm:"not null"`
 }
+
+// APIClientSMS is a type that defines an api client account for sending sms
+type APIClientSMS struct {
+	AccountID string `json:"accountID"`
+	AuthToken string `json:"authToken"`
+	From      string `json:"from"`
+}
+
+// MessageSMS is a type that defines a sms message body
+type MessageSMS struct {
+	MessageBody []string `json:"messageBody"`
+}
+
+// ErrMap is a type that defines a map with string identifier and it's error
+type ErrMap map[string]error
+
+// StringMap is a method that returns string map corresponding to the ErrMap where the error type is converted to a string
+func (errMap ErrMap) StringMap() map[string]string {
+	stringMap := make(map[string]string)
+	for key, value := range errMap {
+		stringMap[key] = value.Error()
+	}
+
+	return stringMap
+}

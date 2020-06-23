@@ -33,7 +33,7 @@ func NewPasswordRepository(connection *gorm.DB) user.IPasswordRepository {
 /* ================================= UserRepository Methods ================================= */
 
 // Create is a method that adds a new user to the database
-func (repo *UserRepository) Create(newOPUser *entity.User) (*entity.User, error) {
+func (repo *UserRepository) Create(newOPUser *entity.User) error {
 	totalNumOfUsers := repo.CountUser()
 	newOPUser.UserID = fmt.Sprintf("OP%s%d", tools.RandomStringGN(7), totalNumOfUsers+1)
 
@@ -44,9 +44,9 @@ func (repo *UserRepository) Create(newOPUser *entity.User) (*entity.User, error)
 
 	err := repo.conn.Create(newOPUser).Error
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return newOPUser, nil
+	return nil
 }
 
 // Find is a method that finds a certain user from the database using an identifier,
@@ -64,20 +64,20 @@ func (repo *UserRepository) Find(identifier string) (*entity.User, error) {
 }
 
 // Update is a method that updates a certain user value in the database
-func (repo *UserRepository) Update(opUser *entity.User) (*entity.User, error) {
+func (repo *UserRepository) Update(opUser *entity.User) error {
 
 	prevOPUser := new(entity.User)
 	err := repo.conn.Model(opUser).Where("user_id = ?", opUser.UserID).Find(prevOPUser).Error
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = repo.conn.Save(opUser).Error
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return opUser, nil
+	return nil
 }
 
 // Delete is a method that deletes a certain user from the database using an identifier.
@@ -111,13 +111,13 @@ func (repo *UserRepository) IsUnique(columnName string, columnValue interface{})
 /* ================================= PasswordRepository Methods ================================= */
 
 // Create is a method that adds a new user password to the database
-func (repo *PasswordRepository) Create(newOPPassword *entity.UserPassword) (*entity.UserPassword, error) {
+func (repo *PasswordRepository) Create(newOPPassword *entity.UserPassword) error {
 
 	err := repo.conn.Create(newOPPassword).Error
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return newOPPassword, nil
+	return nil
 }
 
 // Find is a method that finds a certain user's password from the database using an identifier.
@@ -135,20 +135,20 @@ func (repo *PasswordRepository) Find(identifier string) (*entity.UserPassword, e
 }
 
 // Update is a method that updates a certain user's password value in the database
-func (repo *PasswordRepository) Update(opPassword *entity.UserPassword) (*entity.UserPassword, error) {
+func (repo *PasswordRepository) Update(opPassword *entity.UserPassword) error {
 
 	prevOPPassword := new(entity.UserPassword)
 	err := repo.conn.Model(opPassword).Where("user_id = ?", opPassword.UserID).Find(prevOPPassword).Error
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = repo.conn.Save(opPassword).Error
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return opPassword, nil
+	return nil
 }
 
 // Delete is a method that deletes a certain user's password from the database using an identifier.

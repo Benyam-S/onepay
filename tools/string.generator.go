@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 )
@@ -27,4 +28,11 @@ func GenerateRandomBytes(n int) ([]byte, error) {
 		return nil, err
 	}
 	return b, nil
+}
+
+// GenerateOTP is a function that generates a random otp value of 4 digits
+func GenerateOTP() string {
+	rand.Seed(time.Now().UnixNano())
+	nBig := rand.Int63n(8999)
+	return fmt.Sprintf("%d", nBig+1000)
 }
