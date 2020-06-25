@@ -214,3 +214,31 @@ func (handler *UserHandler) HandleLogin(w http.ResponseWriter, r *http.Request) 
 	}
 
 }
+
+// HandleDashboard is a handler func that hanles a request for access the dashboard
+func (handler *UserHandler) HandleDashboard(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	_, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+}
+
+// HandleLogout is a handler func that hanles a logout request
+func (handler *UserHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	clientSession, ok := ctx.Value(entity.Key("onepay_client_session")).(*session.ClientSession)
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Deleting server side session from the system
+	handler.uservice.DeleteSession(clientSession.SessionID)
+
+	// Removing client cookie
+	clientSession.Remove(w)
+
+}

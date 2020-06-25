@@ -9,8 +9,11 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/Benyam-S/onepay/session"
+
 	"github.com/Benyam-S/onepay/client/http/handler"
 	"github.com/Benyam-S/onepay/entity"
+	"github.com/Benyam-S/onepay/tools"
 	"github.com/Benyam-S/onepay/user/service"
 	"github.com/go-redis/redis"
 
@@ -21,9 +24,10 @@ import (
 
 var (
 	configFilesDir string
-	redisClient    redis.Client
+	redisClient    *redis.Client
 	mysqlDB        *gorm.DB
 	sysConfig      SystemConfig
+	err            error
 
 	userHandler *handler.UserHandler
 )
@@ -43,29 +47,10 @@ func initServer() {
 	sysConfigDir := filepath.Join(configFilesDir, "/config.server.json")
 	data, err := ioutil.ReadFile(sysConfigDir)
 
-	var sysConfig SystemConfig
 	err = json.Unmarshal(data, &sysConfig)
 	if err != nil {
 		panic(err)
 	}
-
-	redisDB, _ := strconv.ParseInt(sysConfig.RedisClient["database"], 0, 0)
-	var redisClient = redis.NewClient(&redis.Options{
-		Addr:     sysConfig.RedisClient["address"] + ":" + sysConfig.RedisClient["port"],
-		Password: sysConfig.RedisClient["password"], // no password set
-		DB:       int(redisDB),                      // use default DB
-	})
-
-	mysqlDB, err = gorm.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local",
-		sysConfig.MysqlClient["user"], sysConfig.MysqlClient["password"],
-		sysConfig.MysqlClient["address"], sysConfig.MysqlClient["port"], sysConfig.MysqlClient["database"]))
-
-	if err != nil {
-		panic(err)
-	}
-
-	defer mysqlDB.Close()
-	fmt.Println("Connected to the database: mysql @GORM")
 
 	// Setting enviromental variables so they can be used any where on the application
 	os.Setenv("config_files_dir", configFilesDir)
@@ -85,8 +70,27 @@ func initServer() {
 // initDB initialize the database for takeoff
 func initDB() {
 
+	redisDB, _ := strconv.ParseInt(sysConfig.RedisClient["database"], 0, 0)
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     sysConfig.RedisClient["address"] + ":" + sysConfig.RedisClient["port"],
+		Password: sysConfig.RedisClient["password"], // no password set
+		DB:       int(redisDB),                      // use default DB
+	})
+
+	mysqlDB, err = gorm.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local",
+		sysConfig.MysqlClient["user"], sysConfig.MysqlClient["password"],
+		sysConfig.MysqlClient["address"], sysConfig.MysqlClient["port"], sysConfig.MysqlClient["database"]))
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Connected to the database: mysql @GORM")
+
+	// Creating and Migrating tables from the structurs
 	mysqlDB.AutoMigrate(&entity.UserPassword{})
 	mysqlDB.AutoMigrate(&entity.User{})
+	mysqlDB.AutoMigrate(&session.ServerSession{})
 	mysqlDB.Model(&entity.UserPassword{}).AddForeignKey("user_id", "users(user_id)", "CASCADE", "CASCADE")
 }
 
@@ -96,12 +100,15 @@ func main() {
 
 	// Initializing the server
 	initServer()
+	defer mysqlDB.Close()
 
 	http.HandleFunc("/add", userHandler.HandleInitAddUser)
 	http.HandleFunc("/verify", userHandler.HandleVerifyOTP)
 	http.HandleFunc("/finish", userHandler.HandleFinishAddUser)
 	http.HandleFunc("/login", userHandler.HandleLogin)
 	http.HandleFunc("/filecheck", checkHandler)
+	http.HandleFunc("/dashboard", tools.MiddlewareFactory(userHandler.HandleDashboard, userHandler.Authorization, userHandler.SessionDEValidation, userHandler.SessionAuthentication))
+	http.HandleFunc("/logout", tools.MiddlewareFactory(userHandler.HandleLogout, userHandler.Authorization, userHandler.SessionAuthentication))
 	http.ListenAndServe(":8080", nil)
 }
 

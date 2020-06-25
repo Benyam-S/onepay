@@ -15,5 +15,9 @@ type IService interface {
 
 	VerifyUserPassword(opPassword *entity.UserPassword, verifyPassword string) error
 	FindPassword(identifier string) (*entity.UserPassword, error)
+
 	AddSession(opClientSession *session.ClientSession, opUser *entity.User, r *http.Request) error
+	FindSession(identifier string) ([]*session.ServerSession, error)
+	UpdateSession(opServerSession *session.ServerSession) error
+	DeleteSession(identifier string) (*session.ServerSession, error)
 }

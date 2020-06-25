@@ -15,11 +15,11 @@ import (
 
 // ClientSession is a type that defines a client side user session
 type ClientSession struct {
-	SessionID    string
-	ExpiresAt    int64
-	DailySession int64
-	CreatedAt    int64
-	UpdatedAt    int64
+	SessionID       string
+	ExpiresAt       int64
+	DailyExpiration int64
+	CreatedAt       int64
+	UpdatedAt       int64
 }
 
 // ServerSession is a type that defines a servide side user session
@@ -39,6 +39,16 @@ func (session ClientSession) Valid() error {
 	}
 
 	return nil
+}
+
+// PastDailyExpiration is a method that checks if the session has exceeded daily expiration time
+func (session ClientSession) PastDailyExpiration() bool {
+
+	if time.Now().Unix() > time.Unix(session.DailyExpiration, 0).Add(time.Hour*24).Unix() {
+		return true
+	}
+
+	return false
 }
 
 // Save is a method that save a given session as a client cookie on the network
@@ -78,7 +88,7 @@ func Create(userID string) *ClientSession {
 
 	newOpSession := new(ClientSession)
 	newOpSession.CreatedAt = time.Now().Unix()
-	newOpSession.DailySession = time.Now().Unix()
+	newOpSession.DailyExpiration = time.Now().Unix()
 	newOpSession.UpdatedAt = time.Now().Unix()
 	newOpSession.ExpiresAt = time.Now().Add(time.Hour * 240).Unix()
 
@@ -91,7 +101,7 @@ func Create(userID string) *ClientSession {
 // Extract is a function that generate a valid session from a signed string
 func Extract(signedToken string) (*ClientSession, error) {
 
-	token, err := jwt.ParseWithClaims(signedToken, ClientSession{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(signedToken, &ClientSession{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("error in signing method")
 		}
@@ -102,11 +112,11 @@ func Extract(signedToken string) (*ClientSession, error) {
 		return nil, err
 	}
 
-	opSession, ok := token.Claims.(ClientSession)
+	opSession, ok := token.Claims.(*ClientSession)
 	if !ok || opSession.Valid() != nil {
 		return nil, errors.New("invalid session")
 	}
 
-	return &opSession, nil
+	return opSession, nil
 
 }
