@@ -17,18 +17,6 @@ type UserPassword struct {
 	Salt     string `gorm:"not null"`
 }
 
-// APIClientSMS is a type that defines an api client account for sending sms
-type APIClientSMS struct {
-	AccountID string `json:"accountID"`
-	AuthToken string `json:"authToken"`
-	From      string `json:"from"`
-}
-
-// MessageSMS is a type that defines a sms message body
-type MessageSMS struct {
-	MessageBody []string `json:"messageBody"`
-}
-
 // ErrMap is a type that defines a map with string identifier and it's error
 type ErrMap map[string]error
 

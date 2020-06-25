@@ -1,13 +1,9 @@
 package service
 
 import (
-	"encoding/base64"
 	"errors"
 	"regexp"
 	"strings"
-
-	"github.com/Benyam-S/onepay/tools"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/Benyam-S/onepay/entity"
 	"github.com/Benyam-S/onepay/user"
@@ -15,14 +11,15 @@ import (
 
 // Service is a type that defines user service
 type Service struct {
-	userRepo    user.IUserRepository
-	passwordRep user.IPasswordRepository
+	userRepo     user.IUserRepository
+	passwordRepo user.IPasswordRepository
+	sessionRepo  user.ISessionRepository
 }
 
 // NewUserService is a function that returns a new user service
 func NewUserService(userRepository user.IUserRepository,
-	passwordRepository user.IPasswordRepository) user.IService {
-	return &Service{userRepo: userRepository, passwordRep: passwordRepository}
+	passwordRepository user.IPasswordRepository, sessionRepository user.ISessionRepository) user.IService {
+	return &Service{userRepo: userRepository, passwordRepo: passwordRepository, sessionRepo: sessionRepository}
 }
 
 // AddUser is a method that adds a new OnePay user to the system along with the password
@@ -32,7 +29,7 @@ func (service *Service) AddUser(opUser *entity.User, opPassword *entity.UserPass
 		return err
 	}
 	opPassword.UserID = opUser.UserID
-	err = service.passwordRep.Create(opPassword)
+	err = service.passwordRepo.Create(opPassword)
 	if err != nil {
 		// Cleaning up if password is not add to the database
 		service.userRepo.Delete(opUser.UserID)
@@ -90,25 +87,8 @@ func (service *Service) ValidateUserProfile(opUser *entity.User) entity.ErrMap {
 	return nil
 }
 
-// VerifyUserPassword is a method that verify a user has provided a valid password with a matching verifypassword entry
-func (service *Service) VerifyUserPassword(opPassword *entity.UserPassword, verifyPassword string) error {
-	matchPassword, _ := regexp.MatchString(`^[a-zA-Z0-9\._\-&!?=#]{8}[a-zA-Z0-9\._\-&!?=#]*$`, opPassword.Password)
-
-	if len(opPassword.Password) < 8 {
-		return errors.New("password should contain at least 8 characters")
-	}
-
-	if !matchPassword {
-		return errors.New("invalid characters used in password")
-	}
-
-	if opPassword.Password != verifyPassword {
-		return errors.New("password does not match")
-	}
-
-	opPassword.Salt = tools.RandomStringGN(30)
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(opPassword.Password+opPassword.Salt), 12)
-	opPassword.Password = base64.StdEncoding.EncodeToString(hashedPassword)
-
-	return nil
+// FindUser is a method that find and return a user that matchs the identifier value
+func (service *Service) FindUser(identifier string) (*entity.User, error) {
+	opUser, err := service.userRepo.Find(identifier)
+	return opUser, err
 }

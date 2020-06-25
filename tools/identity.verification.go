@@ -9,21 +9,25 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/Benyam-S/onepay/entity"
 )
+
+// APIClientSMS is a type that defines an api client account for sending sms
+type APIClientSMS struct {
+	AccountID string `json:"accountID"`
+	AuthToken string `json:"authToken"`
+	From      string `json:"from"`
+}
 
 // SendSMS is a function that sends a given message to the provide phone number
 func SendSMS(to, msg string) (string, error) {
 
-	wd, _ := os.Getwd()
-	dir := filepath.Join(wd, "./assets/accounts", "/account.api.sms.json")
+	dir := filepath.Join(os.Getenv("config_files_dir"), "/accounts/account.api.sms.json")
 	data, err := ioutil.ReadFile(dir)
 	if err != nil {
 		return "", err
 	}
 
-	var clientAccount entity.APIClientSMS
+	var clientAccount APIClientSMS
 	err = json.Unmarshal(data, &clientAccount)
 	if err != nil {
 		return "", err

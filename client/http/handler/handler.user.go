@@ -1,12 +1,17 @@
 package handler
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/Benyam-S/onepay/session"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/google/uuid"
 
@@ -59,7 +64,7 @@ func (handler *UserHandler) HandleInitAddUser(w http.ResponseWriter, r *http.Req
 	dir := filepath.Join(wd, "./assets/messages", "/message.sms.json")
 	data, err1 := ioutil.ReadFile(dir)
 
-	var messageSMS entity.MessageSMS
+	var messageSMS map[string][]string
 	err2 := json.Unmarshal(data, &messageSMS)
 
 	if err1 != nil || err2 != nil {
@@ -67,7 +72,7 @@ func (handler *UserHandler) HandleInitAddUser(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	msg := messageSMS.MessageBody[0] + otp + ". " + messageSMS.MessageBody[1]
+	msg := messageSMS["message_body"][0] + otp + ". " + messageSMS["message_body"][1]
 	smsMessageID, err := tools.SendSMS(newOPUser.PhoneNumber, msg)
 
 	if err != nil {
@@ -164,4 +169,48 @@ func (handler *UserHandler) HandleFinishAddUser(w http.ResponseWriter, r *http.R
 	output, _ := json.Marshal(newOPUser)
 	w.WriteHeader(http.StatusOK)
 	w.Write(output)
+}
+
+// HandleLogin is a handler func that handles a request for logging into the system
+func (handler *UserHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	identifier := r.FormValue("identifier")
+	password := r.FormValue("password")
+
+	// Checking if the user exists
+	opUser, err := handler.uservice.FindUser(identifier)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
+	opPassword, err := handler.uservice.FindPassword(opUser.UserID)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Comparing the hashed password with the given password
+	hasedPassword, _ := base64.StdEncoding.DecodeString(opPassword.Password)
+	err = bcrypt.CompareHashAndPassword(hasedPassword, []byte(password+opPassword.Salt))
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Creating client side session and saving cookie
+	opSession := session.Create(opUser.UserID)
+	err = opSession.Save(w)
+	if err != nil {
+		http.Error(w, "unable to set cookie", http.StatusInternalServerError)
+		return
+	}
+
+	// Creating server side session and saving to the system
+	err = handler.uservice.AddSession(opSession, opUser, r)
+	if err != nil {
+		http.Error(w, "unable to set session", http.StatusInternalServerError)
+		return
+	}
+
 }

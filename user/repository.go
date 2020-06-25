@@ -1,6 +1,9 @@
 package user
 
-import "github.com/Benyam-S/onepay/entity"
+import (
+	"github.com/Benyam-S/onepay/entity"
+	"github.com/Benyam-S/onepay/session"
+)
 
 // IUserRepository is an interface that defines all repository methods of a user struct
 type IUserRepository interface {
@@ -18,4 +21,12 @@ type IPasswordRepository interface {
 	Find(identifier string) (*entity.UserPassword, error)
 	Update(opPassword *entity.UserPassword) error
 	Delete(identifier string) (*entity.UserPassword, error)
+}
+
+// ISessionRepository is an interface that defines all repository methods of a user's server side session struct
+type ISessionRepository interface {
+	Create(newOPSession *session.ServerSession) error
+	Find(identifier string) ([]*session.ServerSession, error)
+	Update(opSession *session.ServerSession) error
+	Delete(identifier string) (*session.ServerSession, error)
 }
