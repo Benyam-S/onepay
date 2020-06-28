@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"os"
+	"time"
 
+	"github.com/Benyam-S/onepay/client/http/session"
 	"github.com/Benyam-S/onepay/entity"
-	"github.com/Benyam-S/onepay/session"
 )
 
 // SessionAuthentication is a middleware that validates a request cookie contain a valid onepay session value
@@ -26,11 +28,34 @@ func (UserHandler) SessionAuthentication(next http.HandlerFunc) http.HandlerFunc
 			return
 		}
 
+		// Creating a new response write so it can be passed to the next handler
+		newW := httptest.NewRecorder()
+
+		// Adding the client session to the context
 		ctx := context.Background()
 		ctx = context.WithValue(ctx, entity.Key("onepay_client_session"), clientSession)
 		r = r.WithContext(ctx)
 
-		next(w, r)
+		next(newW, r)
+
+		// Obtaining all the header key value pairs from the previously created response writer
+		for k, v := range newW.HeaderMap {
+			w.Header()[k] = v
+		}
+
+		content := newW.Body.Bytes()
+
+		// Refreshing session expiration time if we didn't want to logout
+		// Meaning we didn't request Set-Cookie from the inside handlers
+		if len(w.Header()["Set-Cookie"]) == 0 {
+			clientSession.ExpiresAt = time.Now().Add(time.Hour * 240).Unix()
+			clientSession.UpdatedAt = time.Now().Unix()
+			clientSession.Save(w)
+		}
+
+		w.WriteHeader(newW.Code)
+		w.Write(content)
+
 	}
 }
 

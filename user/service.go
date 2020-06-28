@@ -3,8 +3,9 @@ package user
 import (
 	"net/http"
 
+	"github.com/Benyam-S/onepay/api"
+	"github.com/Benyam-S/onepay/client/http/session"
 	"github.com/Benyam-S/onepay/entity"
-	"github.com/Benyam-S/onepay/session"
 )
 
 // IService is an interface that defines all the service methods of a user struct
@@ -20,4 +21,9 @@ type IService interface {
 	FindSession(identifier string) ([]*session.ServerSession, error)
 	UpdateSession(opServerSession *session.ServerSession) error
 	DeleteSession(identifier string) (*session.ServerSession, error)
+
+	AddAPIClient(apiClient *api.Client, opUser *entity.User) error
+	FindAPIClient(identifier, clientType string) ([]*api.Client, error)
+
+	AddAPIToken(apiToken *api.Token, apiClient *api.Client, opUser *entity.User) error
 }

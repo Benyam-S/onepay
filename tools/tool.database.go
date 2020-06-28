@@ -10,9 +10,9 @@ import (
 // SetValue is a function that adds a key value pair to a redis database
 func SetValue(redisClient *redis.Client, key string, value string, expiry time.Duration) error {
 	ctx := context.Background()
-	errr := redisClient.Set(ctx, key, value, expiry).Err()
-	if errr != nil {
-		return errr
+	err := redisClient.Set(ctx, key, value, expiry).Err()
+	if err != nil {
+		return err
 	}
 	return nil
 }

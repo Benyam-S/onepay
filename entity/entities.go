@@ -1,6 +1,8 @@
 package entity
 
-import "net/http"
+import (
+	"net/http"
+)
 
 // User is a type that defines a OnePay user
 type User struct {

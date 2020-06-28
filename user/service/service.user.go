@@ -11,15 +11,19 @@ import (
 
 // Service is a type that defines user service
 type Service struct {
-	userRepo     user.IUserRepository
-	passwordRepo user.IPasswordRepository
-	sessionRepo  user.ISessionRepository
+	userRepo      user.IUserRepository
+	passwordRepo  user.IPasswordRepository
+	sessionRepo   user.ISessionRepository
+	apiClientRepo user.IAPIClientRepository
+	apiTokenRepo  user.IAPITokenRepository
 }
 
 // NewUserService is a function that returns a new user service
 func NewUserService(userRepository user.IUserRepository,
-	passwordRepository user.IPasswordRepository, sessionRepository user.ISessionRepository) user.IService {
-	return &Service{userRepo: userRepository, passwordRepo: passwordRepository, sessionRepo: sessionRepository}
+	passwordRepository user.IPasswordRepository, sessionRepository user.ISessionRepository,
+	apiClientRepository user.IAPIClientRepository, apiTokenRepository user.IAPITokenRepository) user.IService {
+	return &Service{userRepo: userRepository, passwordRepo: passwordRepository, sessionRepo: sessionRepository,
+		apiClientRepo: apiClientRepository, apiTokenRepo: apiTokenRepository}
 }
 
 // AddUser is a method that adds a new OnePay user to the system along with the password

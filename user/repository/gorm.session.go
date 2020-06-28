@@ -3,7 +3,7 @@ package repository
 import (
 	"errors"
 
-	"github.com/Benyam-S/onepay/session"
+	"github.com/Benyam-S/onepay/client/http/session"
 	"github.com/Benyam-S/onepay/user"
 	"github.com/jinzhu/gorm"
 )
@@ -50,7 +50,7 @@ func (repo *SessionRepository) Find(identifier string) ([]*session.ServerSession
 func (repo *SessionRepository) Update(opSession *session.ServerSession) error {
 
 	prevOPSession := new(session.ServerSession)
-	err := repo.conn.Model(session.ServerSession{}).Where("session_id = ?", opSession.SessionID).Find(prevOPSession).Error
+	err := repo.conn.Model(prevOPSession).Where("session_id = ?", opSession.SessionID).First(prevOPSession).Error
 
 	if err != nil {
 		return err

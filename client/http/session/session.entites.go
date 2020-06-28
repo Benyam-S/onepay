@@ -28,7 +28,6 @@ type ServerSession struct {
 	UserID     string `gorm:"not null"`
 	IPAddress  string `gorm:"not null"`
 	DeviceInfo string `gorm:"not null"`
-	Terminated bool
 	gorm.Model
 }
 

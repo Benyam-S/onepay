@@ -9,12 +9,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Benyam-S/onepay/session"
-
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/google/uuid"
 
+	"github.com/Benyam-S/onepay/client/http/session"
 	"github.com/Benyam-S/onepay/tools"
 
 	"github.com/Benyam-S/onepay/entity"
@@ -22,7 +21,7 @@ import (
 	"github.com/go-redis/redis"
 )
 
-// UserHandler is a type that defines a user handler
+// UserHandler is a type that defines a user handler for http client
 type UserHandler struct {
 	uservice    user.IService
 	redisClient *redis.Client

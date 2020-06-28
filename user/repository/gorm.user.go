@@ -22,12 +22,12 @@ func NewUserRepository(connection *gorm.DB) user.IUserRepository {
 
 // Create is a method that adds a new user to the database
 func (repo *UserRepository) Create(newOPUser *entity.User) error {
-	totalNumOfUsers := repo.CountUser()
-	newOPUser.UserID = fmt.Sprintf("OP%s%d", tools.RandomStringGN(7), totalNumOfUsers+1)
+	totalNumOfUsers := repo.CountUsers()
+	newOPUser.UserID = fmt.Sprintf("OP-%s%d", tools.RandomStringGN(7), totalNumOfUsers+1)
 
 	for !repo.IsUnique("user_id", newOPUser.UserID) {
 		totalNumOfUsers++
-		newOPUser.UserID = fmt.Sprintf("OP%s%d", tools.RandomStringGN(7), totalNumOfUsers+1)
+		newOPUser.UserID = fmt.Sprintf("OP-%s%d", tools.RandomStringGN(7), totalNumOfUsers+1)
 	}
 
 	err := repo.conn.Create(newOPUser).Error
@@ -82,8 +82,8 @@ func (repo *UserRepository) Delete(identifier string) (*entity.User, error) {
 	return opUser, nil
 }
 
-// CountUser is a method that counts the user in the database
-func (repo *UserRepository) CountUser() int {
+// CountUsers is a method that counts the users in the database
+func (repo *UserRepository) CountUsers() int {
 	var totalNumOfUsers int
 	repo.conn.Model(&entity.User{}).Count(&totalNumOfUsers)
 	return totalNumOfUsers

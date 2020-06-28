@@ -9,9 +9,14 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/Benyam-S/onepay/session"
+	"github.com/gorilla/mux"
 
-	"github.com/Benyam-S/onepay/client/http/handler"
+	"github.com/Benyam-S/onepay/api"
+	v1 "github.com/Benyam-S/onepay/api/v1"
+
+	urAPIHandler "github.com/Benyam-S/onepay/api/v1/http/handler"
+	urHandler "github.com/Benyam-S/onepay/client/http/handler"
+	"github.com/Benyam-S/onepay/client/http/session"
 	"github.com/Benyam-S/onepay/entity"
 	"github.com/Benyam-S/onepay/tools"
 	"github.com/Benyam-S/onepay/user/service"
@@ -29,7 +34,8 @@ var (
 	sysConfig      SystemConfig
 	err            error
 
-	userHandler *handler.UserHandler
+	userHandler    *urHandler.UserHandler
+	userAPIHandler *urAPIHandler.UserAPIHandler
 )
 
 // SystemConfig is a type that defines a server system configuration file
@@ -63,8 +69,12 @@ func initServer() {
 	userRepo := repository.NewUserRepository(mysqlDB)
 	passwordRepo := repository.NewPasswordRepository(mysqlDB)
 	sessionRepo := repository.NewSessionRepository(mysqlDB)
-	userService := service.NewUserService(userRepo, passwordRepo, sessionRepo)
-	userHandler = handler.NewUserHandler(userService, redisClient)
+	apiClientRepo := repository.NewAPIClientRepository(mysqlDB)
+	apiTokenRepo := repository.NewAPITokenRepository(mysqlDB)
+	userService := service.NewUserService(userRepo, passwordRepo, sessionRepo, apiClientRepo, apiTokenRepo)
+
+	userHandler = urHandler.NewUserHandler(userService, redisClient)
+	userAPIHandler = urAPIHandler.NewUserAPIHandler(userService, redisClient)
 }
 
 // initDB initialize the database for takeoff
@@ -91,7 +101,13 @@ func initDB() {
 	mysqlDB.AutoMigrate(&entity.UserPassword{})
 	mysqlDB.AutoMigrate(&entity.User{})
 	mysqlDB.AutoMigrate(&session.ServerSession{})
+	mysqlDB.AutoMigrate(&api.Client{})
+	mysqlDB.AutoMigrate(&api.Token{})
+
 	mysqlDB.Model(&entity.UserPassword{}).AddForeignKey("user_id", "users(user_id)", "CASCADE", "CASCADE")
+	mysqlDB.Model(&session.ServerSession{}).AddForeignKey("user_id", "users(user_id)", "CASCADE", "CASCADE")
+	mysqlDB.Model(&api.Client{}).AddForeignKey("client_user_id", "users(user_id)", "CASCADE", "CASCADE")
+	mysqlDB.Model(&api.Token{}).AddForeignKey("api_key", "api_clients(api_key)", "CASCADE", "CASCADE")
 }
 
 func main() {
@@ -102,14 +118,19 @@ func main() {
 	initServer()
 	defer mysqlDB.Close()
 
-	http.HandleFunc("/add", userHandler.HandleInitAddUser)
-	http.HandleFunc("/verify", userHandler.HandleVerifyOTP)
-	http.HandleFunc("/finish", userHandler.HandleFinishAddUser)
-	http.HandleFunc("/login", userHandler.HandleLogin)
-	http.HandleFunc("/filecheck", checkHandler)
-	http.HandleFunc("/dashboard", tools.MiddlewareFactory(userHandler.HandleDashboard, userHandler.Authorization, userHandler.SessionDEValidation, userHandler.SessionAuthentication))
-	http.HandleFunc("/logout", tools.MiddlewareFactory(userHandler.HandleLogout, userHandler.Authorization, userHandler.SessionAuthentication))
-	http.ListenAndServe(":8080", nil)
+	router := mux.NewRouter()
+
+	router.HandleFunc("/add", userHandler.HandleInitAddUser)
+	router.HandleFunc("/verify", userHandler.HandleVerifyOTP)
+	router.HandleFunc("/finish", userHandler.HandleFinishAddUser)
+	router.HandleFunc("/login", userHandler.HandleLogin)
+	router.HandleFunc("/filecheck", checkHandler)
+	router.HandleFunc("/dashboard", tools.MiddlewareFactory(userHandler.HandleDashboard, userHandler.Authorization, userHandler.SessionDEValidation, userHandler.SessionAuthentication))
+	router.HandleFunc("/logout", tools.MiddlewareFactory(userHandler.HandleLogout, userHandler.Authorization, userHandler.SessionAuthentication))
+
+	v1.Start(userAPIHandler, router)
+
+	http.ListenAndServe(":8080", router)
 }
 
 func checkHandler(w http.ResponseWriter, r *http.Request) {

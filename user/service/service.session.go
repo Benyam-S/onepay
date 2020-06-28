@@ -3,8 +3,8 @@ package service
 import (
 	"net/http"
 
+	"github.com/Benyam-S/onepay/client/http/session"
 	"github.com/Benyam-S/onepay/entity"
-	"github.com/Benyam-S/onepay/session"
 )
 
 // AddSession is a method that adds a new user session to the system using the client side session
