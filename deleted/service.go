@@ -6,4 +6,5 @@ import "github.com/Benyam-S/onepay/entity"
 type IService interface {
 	AddUserToTrash(opUser *entity.User) error
 	AddLinkedAccountToTrash(linkedAccount *entity.LinkedAccount) error
+	SearchDeletedLinkedAccounts(columnName, columnValue string) []*entity.LinkedAccount
 }

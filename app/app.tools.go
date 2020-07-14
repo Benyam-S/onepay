@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -59,4 +60,62 @@ func AddToDailyTransaction(userID string, amount float64, redisClient *redis.Cli
 	currentAmountString := fmt.Sprintf("%f", prevAmount+amount)
 
 	return tools.SetValue(redisClient, "daily_transaction_limit:"+userID, currentAmountString, time.Hour*24)
+}
+
+// ClosingFile is a function that generates a file that contain a user histories and linked account information
+// for a user that is deleting it's onepay account
+func ClosingFile(opUser *entity.User, histories []*entity.UserHistory,
+	linkedAccounts []*entity.LinkedAccount) (string, error) {
+
+	fileName := tools.GenerateRandomString(7) + ".txt"
+	wd, _ := os.Getwd()
+	filePath := filepath.Join(wd, "./assets/temp", fileName)
+	file, err := os.Create(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = file.WriteString("\n\n ********************************* USER PROFIEL ********************************* \n\n")
+	if err != nil {
+		return "", err
+	}
+
+	line := "First Name: " + opUser.FirstName + "	\nLast Name: " + opUser.LastName +
+		" \nEmail: " + opUser.Email + " \nPHONE NUMBER: " + opUser.PhoneNumber
+
+	_, err = file.WriteString(line)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = file.WriteString("\n\n ********************************* USER LINKED ACCOUNTS ********************************* \n\n")
+	if err != nil {
+		return "", err
+	}
+
+	for _, linkedAccount := range linkedAccounts {
+		line := "Account ID: " + linkedAccount.AccountID + "	Account Provider: " + linkedAccount.AccountProvider + "\n"
+		_, err = file.WriteString(line)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	_, err = file.WriteString("\n\n ********************************* USER HISTORY ********************************* \n\n")
+	if err != nil {
+		return "", err
+	}
+
+	for _, history := range histories {
+		line := "Sender ID: " + history.SenderID + "		Receiver ID: " + history.ReceiverID +
+			"	Sent At: " + history.SentAt.String() + "	Received At: " + history.ReceivedAt.String() +
+			"	Method: " + history.Method + "	Amount:" + strconv.FormatFloat(history.Amount, 'f', 2, 64) + "\n"
+
+		_, err = file.WriteString(line)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return fileName, nil
 }

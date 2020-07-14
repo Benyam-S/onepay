@@ -51,3 +51,22 @@ func (service *Service) AddLinkedAccountToTrash(linkedAccount *entity.LinkedAcco
 
 	return service.deletedLinkedAccountRepo.Create(deletedLinkedAccount)
 }
+
+// SearchDeletedLinkedAccounts is a method that returns all the deleted linked accounts that match the given identifier
+func (service *Service) SearchDeletedLinkedAccounts(columnName, columnValue string) []*entity.LinkedAccount {
+
+	deletedLinkedAccounts := service.deletedLinkedAccountRepo.Search(columnName, columnValue)
+	linkedAccounts := make([]*entity.LinkedAccount, 0)
+
+	for _, deletedLinkedAccount := range deletedLinkedAccounts {
+		linkedAccount := new(entity.LinkedAccount)
+		linkedAccount.AccessToken = deletedLinkedAccount.AccessToken
+		linkedAccount.AccountID = deletedLinkedAccount.AccountID
+		linkedAccount.AccountProvider = deletedLinkedAccount.AccountProvider
+		linkedAccount.UserID = deletedLinkedAccount.UserID
+		linkedAccount.ID = deletedLinkedAccount.ID
+		linkedAccounts = append(linkedAccounts, linkedAccount)
+	}
+
+	return linkedAccounts
+}

@@ -19,13 +19,16 @@ func Start(handler *handler.UserAPIHandler, router *mux.Router) {
 	router.HandleFunc("/api/v1/oauth/logout", tools.MiddlewareFactory(handler.HandleLogout, handler.Authorization,
 		handler.AccessTokenAuthentication))
 
-	router.HandleFunc("/api/v1/oauth/user/password", tools.MiddlewareFactory(handler.HandleChangePassword, handler.Authorization,
-		handler.AccessTokenAuthentication)).Methods("PUT")
-
-	router.HandleFunc("/api/v1/oauth/user/profile", tools.MiddlewareFactory(handler.HandleGetProfile, handler.Authorization,
+	router.HandleFunc("/api/v1/oauth/user", tools.MiddlewareFactory(handler.HandleGetProfile, handler.Authorization,
 		handler.AccessTokenAuthentication)).Methods("GET")
 
-	router.HandleFunc("/api/v1/oauth/user/profile", tools.MiddlewareFactory(handler.HandleUpateProfile, handler.Authorization,
+	router.HandleFunc("/api/v1/oauth/user", tools.MiddlewareFactory(handler.HandleUpateProfile, handler.Authorization,
+		handler.AccessTokenAuthentication)).Methods("PUT")
+
+	router.HandleFunc("/api/v1/oauth/user", tools.MiddlewareFactory(handler.HandleDeleteUser, handler.Authorization,
+		handler.AccessTokenAuthentication)).Methods("DELETE")
+
+	router.HandleFunc("/api/v1/oauth/user/password", tools.MiddlewareFactory(handler.HandleChangePassword, handler.Authorization,
 		handler.AccessTokenAuthentication)).Methods("PUT")
 
 	router.HandleFunc("/api/v1/oauth/user/{user_id}/pic", handler.HandleGetPhoto).Methods("GET")

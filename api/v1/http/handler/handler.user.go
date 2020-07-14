@@ -499,6 +499,76 @@ func (handler *UserAPIHandler) HandleUploadPhoto(w http.ResponseWriter, r *http.
 
 /* ++++++++++++++++++++++++++++++++++++++++++ REMOVING PROFILE DATA ++++++++++++++++++++++++++++++++++++++++++ */
 
+// HandleDeleteUser is a method that handles the request for deleting a user account
+func (handler *UserAPIHandler) HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
+
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	password := r.FormValue("password")
+
+	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
+	opPassword, err := handler.uService.FindPassword(opUser.UserID)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Comparing the hashed password with the given password
+	hasedPassword, _ := base64.StdEncoding.DecodeString(opPassword.Password)
+	err = bcrypt.CompareHashAndPassword(hasedPassword, []byte(password+opPassword.Salt))
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	userHistories, linkedAccounts, err := handler.app.InitDeleteOnePayAccount(opUser.UserID)
+	if err != nil {
+		output, _ := json.Marshal(map[string]string{"error": err.Error()})
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	opUser, err = handler.uService.DeleteUser(opUser.UserID)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	// Deleting the user's wallet
+	handler.app.WalletService.DeleteWallet(opUser.UserID)
+
+	// Removing all the user's linked accounts
+	handler.app.LinkedAccountService.DeleteLinkedAccounts(opUser.UserID)
+
+	// Adding deleted user to trash
+	handler.dService.AddUserToTrash(opUser)
+
+	for _, linkedAccount := range linkedAccounts {
+		// Adding linked account to trash
+		handler.dService.AddLinkedAccountToTrash(linkedAccount)
+	}
+
+	// Getting all the deleted linked accounts
+	linkedAccounts = handler.dService.SearchDeletedLinkedAccounts("user_id", opUser.UserID)
+
+	tempFile, err := app.ClosingFile(opUser, userHistories, linkedAccounts)
+
+	if err == nil {
+		wd, _ := os.Getwd()
+		filePath := filepath.Join(wd, "./assets/temp", tempFile)
+		http.ServeFile(w, r, filePath)
+		tools.RemoveFile(filePath)
+	}
+
+}
+
 // HandleRemovePhoto is a handler func that handles the request for removing user's profile pic
 func (handler *UserAPIHandler) HandleRemovePhoto(w http.ResponseWriter, r *http.Request) {
 

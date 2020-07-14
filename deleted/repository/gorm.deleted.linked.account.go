@@ -42,6 +42,20 @@ func (repo *DeletedLinkedAccountRepository) Find(identifier string) (*entity.Del
 	return deletedLinkedAccount, nil
 }
 
+// Search is a method that searchs for a linked account that match the column name and value.
+func (repo *DeletedLinkedAccountRepository) Search(colunmName string, columnValue interface{}) []*entity.DeletedLinkedAccount {
+
+	var deletedLinkedAccounts []*entity.DeletedLinkedAccount
+	err := repo.conn.Model(entity.DeletedLinkedAccount{}).
+		Where(colunmName+" = ?", columnValue).
+		Find(&deletedLinkedAccounts).Error
+
+	if err != nil {
+		return []*entity.DeletedLinkedAccount{}
+	}
+	return deletedLinkedAccounts
+}
+
 // Update is a method that updates a certain deleted linked account value in the database
 func (repo *DeletedLinkedAccountRepository) Update(deletedLinkedAccount *entity.DeletedLinkedAccount) error {
 

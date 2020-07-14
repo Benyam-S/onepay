@@ -14,6 +14,7 @@ type IDeletedUserRepository interface {
 type IDeletedLinkedAccountRepository interface {
 	Create(deletedLinkedAccount *entity.DeletedLinkedAccount) error
 	Find(identifier string) (*entity.DeletedLinkedAccount, error)
+	Search(colunmName string, columnValue interface{}) []*entity.DeletedLinkedAccount
 	Update(deletedLinkedAccount *entity.DeletedLinkedAccount) error
 	Delete(identifier string) (*entity.DeletedLinkedAccount, error)
 	DeleteMultiple(identifier string) ([]*entity.DeletedLinkedAccount, error)
