@@ -4,5 +4,7 @@ CREATE TABLE api_clients(
     api_secret VARCHAR NOT NULL,
     salt VARCHAR NOT NULL,
     app_name VARCHAR,
-    type VARCHAR NOT NULL
+    type VARCHAR NOT NULL,
+    created_at DATETIME,
+    updated_at DATETIME
 );

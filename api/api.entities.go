@@ -6,28 +6,30 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/jinzhu/gorm"
 )
 
 // Client is a type that defines a OnePay api client
 type Client struct {
 	ClientUserID string `gorm:"not null"`
-	APIKey       string `gorm:"unique; not null"`
+	APIKey       string `gorm:"primary_key; unique; not null"`
 	APISecret    string `gorm:"not null"`
 	CallBack     string `gorm:"not null"`
 	APPName      string
 	Type         string `gorm:"not null"`
-	gorm.Model
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // Token is a type that defines a OnePay api access token
 type Token struct {
-	AccessToken     string `gorm:"not null; unique"`
+	AccessToken     string `gorm:"primary_key; not null; unique"`
 	UserID          string `gorm:"not null"`
 	APIKey          string `gorm:"not null"`
 	ExpiresAt       int64
 	DailyExpiration int64
-	gorm.Model
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	Deactivated     bool // This can be used to identify a session that has been logged out
 }
 
 // TableName is a method that set Tokens's table name to be `api_tokens`

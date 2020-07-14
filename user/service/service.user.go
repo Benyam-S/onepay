@@ -2,20 +2,30 @@ package service
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/Benyam-S/onepay/linkedaccount"
+	"github.com/Benyam-S/onepay/moneytoken"
+	"github.com/Benyam-S/onepay/wallet"
+
 	"github.com/Benyam-S/onepay/entity"
+	"github.com/Benyam-S/onepay/tools"
 	"github.com/Benyam-S/onepay/user"
 )
 
 // Service is a type that defines user service
 type Service struct {
-	userRepo      user.IUserRepository
-	passwordRepo  user.IPasswordRepository
-	sessionRepo   user.ISessionRepository
-	apiClientRepo user.IAPIClientRepository
-	apiTokenRepo  user.IAPITokenRepository
+	userRepo          user.IUserRepository
+	passwordRepo      user.IPasswordRepository
+	sessionRepo       user.ISessionRepository
+	linkedAccountRepo linkedaccount.ILinkedAccountRepository
+	moneyTokenRepo    moneytoken.IMoneyTokenRepository
+	walletRepo        wallet.IWalletRepository
+	apiClientRepo     user.IAPIClientRepository
+	apiTokenRepo      user.IAPITokenRepository
 }
 
 // NewUserService is a function that returns a new user service
@@ -76,12 +86,31 @@ func (service *Service) ValidateUserProfile(opUser *entity.User) entity.ErrMap {
 		}
 	}
 
-	if matchEmail && !service.userRepo.IsUnique("email", opUser.Email) {
-		errMap["email"] = errors.New("email address already exists")
-	}
+	// Meaning a new user is being add
+	if opUser.UserID == "" {
+		if matchEmail && !service.userRepo.IsUnique("email", opUser.Email) {
+			errMap["email"] = errors.New("email address already exists")
+		}
 
-	if matchPhoneNumber && !service.userRepo.IsUnique("phone_number", opUser.PhoneNumber) {
-		errMap["phone_number"] = errors.New("phonenumber already exists")
+		if matchPhoneNumber && !service.userRepo.IsUnique("phone_number", opUser.PhoneNumber) {
+			errMap["phone_number"] = errors.New("phonenumber already exists")
+		}
+	} else {
+		// Meaning trying to update user
+		prevProfile, _ := service.userRepo.Find(opUser.UserID)
+
+		// checking uniquness only for email that isn't identical to the user's previous email
+		if matchEmail && prevProfile.Email != opUser.Email {
+			if !service.userRepo.IsUnique("email", opUser.Email) {
+				errMap["email"] = errors.New("email address already exists")
+			}
+		}
+
+		if matchPhoneNumber && prevProfile.PhoneNumber != opUser.PhoneNumber {
+			if !service.userRepo.IsUnique("phone_number", opUser.PhoneNumber) {
+				errMap["phone_number"] = errors.New("phonenumber already exists")
+			}
+		}
 	}
 
 	if len(errMap) > 0 {
@@ -93,6 +122,43 @@ func (service *Service) ValidateUserProfile(opUser *entity.User) entity.ErrMap {
 
 // FindUser is a method that find and return a user that matchs the identifier value
 func (service *Service) FindUser(identifier string) (*entity.User, error) {
-	opUser, err := service.userRepo.Find(identifier)
-	return opUser, err
+	if identifier == "" {
+		return nil, errors.New("empty identifier")
+	}
+
+	return service.userRepo.Find(identifier)
+}
+
+// UpdateUser is a method that updates a user in the system
+func (service *Service) UpdateUser(User *entity.User) error {
+	return service.userRepo.Update(User)
+}
+
+// UpdateUserSingleValue is a method that updates a single column entiry of a user
+func (service *Service) UpdateUserSingleValue(userID, columnName string, columnValue interface{}) error {
+	User := entity.User{UserID: userID}
+	return service.userRepo.UpdateValue(&User, columnName, columnValue)
+}
+
+// DeleteUser is a method that deletes a user from the system including it's session's and password and other datas
+func (service *Service) DeleteUser(userID string) (*entity.User, error) {
+
+	// Removing the linked tables first
+	service.apiClientRepo.DeleteMultiple(userID)
+	service.apiTokenRepo.DeleteMultiple(userID)
+	service.passwordRepo.Delete(userID)
+	service.sessionRepo.DeleteMultiple(userID)
+
+	opUser, err := service.userRepo.Delete(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if opUser.ProfilePic != "" {
+		wd, _ := os.Getwd()
+		filePath := filepath.Join(wd, "./assets/profilepics", opUser.ProfilePic)
+		tools.RemoveFile(filePath)
+	}
+
+	return opUser, nil
 }

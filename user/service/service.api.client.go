@@ -12,7 +12,7 @@ import (
 func (service *Service) AddAPIClient(apiClient *api.Client, opUser *entity.User) error {
 
 	apiClient.ClientUserID = opUser.UserID
-	apiClient.APISecret = tools.RandomStringGN(20)
+	apiClient.APISecret = tools.GenerateRandomString(20)
 
 	err := service.apiClientRepo.Create(apiClient)
 	return err
@@ -38,4 +38,19 @@ func (service *Service) FindAPIClient(identifier, clientType string) ([]*api.Cli
 	}
 
 	return apiClientsFiltered, nil
+}
+
+// UpdateAPIClient is a method that updates a certain's api client
+func (service *Service) UpdateAPIClient(apiClient *api.Client) error {
+	return service.apiClientRepo.Update(apiClient)
+}
+
+// DeleteAPIClient is a method that deletes a certain's api client using the identifier
+func (service *Service) DeleteAPIClient(identifier string) (*api.Client, error) {
+	return service.apiClientRepo.Delete(identifier)
+}
+
+// DeleteAPIClients is a method that deletes a set of api client from the system that matchs the given identifier
+func (service *Service) DeleteAPIClients(identifier string) ([]*api.Client, error) {
+	return service.apiClientRepo.DeleteMultiple(identifier)
 }

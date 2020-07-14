@@ -29,7 +29,7 @@ func (repo *SessionRepository) Create(newOPSession *session.ServerSession) error
 }
 
 // Find is a method that find user's server side sessions from the database using an identifier.
-// In Find() user_id and session_id can be used as an key
+// In Find() user_id and session_id can be used as a key
 func (repo *SessionRepository) Find(identifier string) ([]*session.ServerSession, error) {
 	var opSessions []*session.ServerSession
 	err := repo.conn.Model(session.ServerSession{}).
@@ -64,7 +64,7 @@ func (repo *SessionRepository) Update(opSession *session.ServerSession) error {
 }
 
 // Delete is a method that deletes a certain user's server side session from the database using an identifier.
-// In Delete() session_id is only used as an key
+// In Delete() session_id is only used as a key
 func (repo *SessionRepository) Delete(identifier string) (*session.ServerSession, error) {
 	opSession := new(session.ServerSession)
 	err := repo.conn.Model(session.ServerSession{}).Where("session_id = ?", identifier).First(opSession).Error
@@ -75,4 +75,22 @@ func (repo *SessionRepository) Delete(identifier string) (*session.ServerSession
 
 	repo.conn.Delete(opSession)
 	return opSession, nil
+}
+
+// DeleteMultiple is a method that deletes multiple user's server side session from the database use identifier.
+// In DeleteMultiple() user_id is only used as a key
+func (repo *SessionRepository) DeleteMultiple(identifier string) ([]*session.ServerSession, error) {
+	var userSessions []*session.ServerSession
+	err := repo.conn.Model(session.ServerSession{}).Where("user_id = ?", identifier).Find(&userSessions).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(userSessions) == 0 {
+		return nil, errors.New("no session for the provided identifier")
+	}
+
+	repo.conn.Model(session.ServerSession{}).Where("user_id = ?", identifier).Delete(session.ServerSession{})
+	return userSessions, nil
 }

@@ -27,7 +27,7 @@ func (repo *PasswordRepository) Create(newOPPassword *entity.UserPassword) error
 }
 
 // Find is a method that finds a certain user's password from the database using an identifier.
-// In Find() user_id is only used as an key
+// In Find() user_id is only used as a key
 func (repo *PasswordRepository) Find(identifier string) (*entity.UserPassword, error) {
 	opPassword := new(entity.UserPassword)
 	err := repo.conn.Model(opPassword).
@@ -44,7 +44,7 @@ func (repo *PasswordRepository) Find(identifier string) (*entity.UserPassword, e
 func (repo *PasswordRepository) Update(opPassword *entity.UserPassword) error {
 
 	prevOPPassword := new(entity.UserPassword)
-	err := repo.conn.Model(opPassword).Where("user_id = ?", opPassword.UserID).Find(prevOPPassword).Error
+	err := repo.conn.Model(prevOPPassword).Where("user_id = ?", opPassword.UserID).First(prevOPPassword).Error
 
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func (repo *PasswordRepository) Update(opPassword *entity.UserPassword) error {
 }
 
 // Delete is a method that deletes a certain user's password from the database using an identifier.
-// In Delete() user_id is only used as an key
+// In Delete() user_id is only used as a key
 func (repo *PasswordRepository) Delete(identifier string) (*entity.UserPassword, error) {
 	opPassword := new(entity.UserPassword)
 	err := repo.conn.Model(opPassword).Where("user_id = ?", identifier).First(opPassword).Error

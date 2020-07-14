@@ -29,7 +29,7 @@ func (repo *APITokenRepository) Create(newAPIToken *api.Token) error {
 }
 
 // Find is a method that find an api token from the database using an identifier.
-// In Find() api_token and api_key can be used as an key
+// In Find() access_token and api_key can be used as a key
 func (repo *APITokenRepository) Find(identifier string) ([]*api.Token, error) {
 	var apiTokens []*api.Token
 	err := repo.conn.Model(api.Token{}).
@@ -64,7 +64,7 @@ func (repo *APITokenRepository) Update(apiToken *api.Token) error {
 }
 
 // Delete is a method that deletes a certain api token from the database using an identifier.
-// In Delete() api_token is only used as an key
+// In Delete() access_token is only used as a key
 func (repo *APITokenRepository) Delete(identifier string) (*api.Token, error) {
 	apiToken := new(api.Token)
 	err := repo.conn.Model(apiToken).Where("access_token = ?", identifier).First(apiToken).Error
@@ -75,4 +75,23 @@ func (repo *APITokenRepository) Delete(identifier string) (*api.Token, error) {
 
 	repo.conn.Delete(apiToken)
 	return apiToken, nil
+}
+
+// DeleteMultiple is a method that deletes multiple api tokens from the database using the identifier.
+// In DeleteMultiple() user_id is only as a key, we didn't used api_key as a key identifier because it may cause loss of user session data
+func (repo *APITokenRepository) DeleteMultiple(identifier string) ([]*api.Token, error) {
+	var apiTokens []*api.Token
+	err := repo.conn.Model(api.Token{}).Where("user_id = ?", identifier).
+		Find(&apiTokens).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(apiTokens) == 0 {
+		return nil, errors.New("no api token for the provided identifier")
+	}
+
+	repo.conn.Model(api.Token{}).Where("user_id = ?", identifier).Delete(api.Token{})
+	return apiTokens, nil
 }

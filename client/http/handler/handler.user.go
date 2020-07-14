@@ -23,13 +23,13 @@ import (
 
 // UserHandler is a type that defines a user handler for http client
 type UserHandler struct {
-	uservice    user.IService
+	uService    user.IService
 	redisClient *redis.Client
 }
 
 // NewUserHandler is a function that returns a new user handler
 func NewUserHandler(userService user.IService, redisClient *redis.Client) *UserHandler {
-	return &UserHandler{uservice: userService, redisClient: redisClient}
+	return &UserHandler{uService: userService, redisClient: redisClient}
 }
 
 // HandleInitAddUser is a handler func that handles a request for initiating adding new user
@@ -44,7 +44,7 @@ func (handler *UserHandler) HandleInitAddUser(w http.ResponseWriter, r *http.Req
 	newOPUser.PhoneNumber = r.FormValue("phone_number")
 
 	// validating user profile and cleaning up
-	errMap := handler.uservice.ValidateUserProfile(newOPUser)
+	errMap := handler.uService.ValidateUserProfile(newOPUser)
 
 	if errMap != nil {
 		output, _ := json.Marshal(errMap.StringMap())
@@ -137,7 +137,7 @@ func (handler *UserHandler) HandleFinishAddUser(w http.ResponseWriter, r *http.R
 	newOPPassword.Password = r.FormValue("password")
 	vPassword := r.FormValue("vPassword")
 
-	err := handler.uservice.VerifyUserPassword(newOPPassword, vPassword)
+	err := handler.uService.VerifyUserPassword(newOPPassword, vPassword)
 	if err != nil {
 		output, _ := json.Marshal(map[string]string{"error": err.Error()})
 		w.WriteHeader(http.StatusBadRequest)
@@ -159,7 +159,7 @@ func (handler *UserHandler) HandleFinishAddUser(w http.ResponseWriter, r *http.R
 	// unmarshaling user data
 	json.Unmarshal([]byte(storedOPUser), newOPUser)
 
-	err = handler.uservice.AddUser(newOPUser, newOPPassword)
+	err = handler.uService.AddUser(newOPUser, newOPPassword)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
@@ -176,14 +176,14 @@ func (handler *UserHandler) HandleLogin(w http.ResponseWriter, r *http.Request) 
 	password := r.FormValue("password")
 
 	// Checking if the user exists
-	opUser, err := handler.uservice.FindUser(identifier)
+	opUser, err := handler.uService.FindUser(identifier)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
 	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
-	opPassword, err := handler.uservice.FindPassword(opUser.UserID)
+	opPassword, err := handler.uService.FindPassword(opUser.UserID)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
@@ -206,7 +206,7 @@ func (handler *UserHandler) HandleLogin(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Creating server side session and saving to the system
-	err = handler.uservice.AddSession(opSession, opUser, r)
+	err = handler.uService.AddSession(opSession, opUser, r)
 	if err != nil {
 		http.Error(w, "unable to set session", http.StatusInternalServerError)
 		return
@@ -234,8 +234,13 @@ func (handler *UserHandler) HandleLogout(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Deleting server side session from the system
-	handler.uservice.DeleteSession(clientSession.SessionID)
+	serverSessions, err := handler.uService.FindSession(clientSession.SessionID)
+	if err == nil {
+		// Instead of deleting the session deactivate them for further use
+		serverSession := serverSessions[0]
+		serverSession.Deactivated = true
+		handler.uService.UpdateSession(serverSession)
+	}
 
 	// Removing client cookie
 	clientSession.Remove(w)

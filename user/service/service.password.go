@@ -32,9 +32,19 @@ func (service *Service) VerifyUserPassword(opPassword *entity.UserPassword, veri
 		return errors.New("password does not match")
 	}
 
-	opPassword.Salt = tools.RandomStringGN(30)
+	opPassword.Salt = tools.GenerateRandomString(30)
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(opPassword.Password+opPassword.Salt), 12)
 	opPassword.Password = base64.StdEncoding.EncodeToString(hashedPassword)
 
 	return nil
+}
+
+// UpdatePassword is a method that updates a certain's user password
+func (service *Service) UpdatePassword(opPassword *entity.UserPassword) error {
+	return service.passwordRepo.Update(opPassword)
+}
+
+// DeletePassword is a method that deletes a certain's user password
+func (service *Service) DeletePassword(identifier string) (*entity.UserPassword, error) {
+	return service.passwordRepo.Delete(identifier)
 }

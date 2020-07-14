@@ -6,8 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/jinzhu/gorm"
-
 	"github.com/Benyam-S/onepay/tools"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
@@ -24,11 +22,13 @@ type ClientSession struct {
 
 // ServerSession is a type that defines a servide side user session
 type ServerSession struct {
-	SessionID  string `gorm:"unique; not null"`
-	UserID     string `gorm:"not null"`
-	IPAddress  string `gorm:"not null"`
-	DeviceInfo string `gorm:"not null"`
-	gorm.Model
+	SessionID   string `gorm:"primary_key; unique; not null"`
+	UserID      string `gorm:"not null"`
+	IPAddress   string `gorm:"not null"`
+	DeviceInfo  string `gorm:"not null"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Deactivated bool // This can be used to identify a session that has been logged out
 }
 
 // Valid a is a method that ensures session is type jwt.Clamis

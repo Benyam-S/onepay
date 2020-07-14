@@ -22,12 +22,11 @@ func NewAPIClientRepository(connection *gorm.DB) user.IAPIClientRepository {
 
 // Create is a method that adds a new api client to the database
 func (repo *APIClientRepository) Create(newAPIClient *api.Client) error {
-	totalNumOfClients := repo.CountClients()
-	newAPIClient.APIKey = fmt.Sprintf("OP_API-%s%d", tools.RandomStringGN(10), totalNumOfClients+1)
+
+	newAPIClient.APIKey = fmt.Sprintf("OP_API-%s%s", newAPIClient.ClientUserID[3:]+"_", tools.GenerateRandomString(7))
 
 	for !repo.IsUnique("api_key", newAPIClient.APIKey) {
-		totalNumOfClients++
-		newAPIClient.APIKey = fmt.Sprintf("OP_API-%s%d", tools.RandomStringGN(10), totalNumOfClients+1)
+		newAPIClient.APIKey = fmt.Sprintf("OP_API-%s%s", newAPIClient.ClientUserID[3:]+"_", tools.GenerateRandomString(7))
 	}
 
 	err := repo.conn.Create(newAPIClient).Error
@@ -38,7 +37,7 @@ func (repo *APIClientRepository) Create(newAPIClient *api.Client) error {
 }
 
 // Find is a method that find an api client from the database using an identifier.
-// In Find() client_user_id and api_key can be used as an key
+// In Find() client_user_id and api_key can be used as a key
 func (repo *APIClientRepository) Find(identifier string) ([]*api.Client, error) {
 	var apiClients []*api.Client
 	err := repo.conn.Model(api.Client{}).
@@ -73,7 +72,7 @@ func (repo *APIClientRepository) Update(apiClient *api.Client) error {
 }
 
 // Delete is a method that deletes a certain api client from the database using an identifier.
-// In Delete() api_key is only used as an key
+// In Delete() api_key is only used as a key
 func (repo *APIClientRepository) Delete(identifier string) (*api.Client, error) {
 	apiClient := new(api.Client)
 	err := repo.conn.Model(apiClient).Where("api_key = ?", identifier).First(apiClient).Error
@@ -86,11 +85,23 @@ func (repo *APIClientRepository) Delete(identifier string) (*api.Client, error) 
 	return apiClient, nil
 }
 
-// CountClients is a method that counts the api clients in the database
-func (repo *APIClientRepository) CountClients() int {
-	var totalNumOfClients int
-	repo.conn.Model(&api.Client{}).Unscoped().Count(&totalNumOfClients)
-	return totalNumOfClients
+// DeleteMultiple is a method that deletes multiple api clients from the database using the identifier.
+// In DeleteMultiple() client_user_id is only used as a key
+func (repo *APIClientRepository) DeleteMultiple(identifier string) ([]*api.Client, error) {
+	var apiClients []*api.Client
+	err := repo.conn.Model(api.Client{}).Where("client_user_id = ?", identifier).
+		Find(&apiClients).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(apiClients) == 0 {
+		return nil, errors.New("no api client for the provided identifier")
+	}
+
+	repo.conn.Model(api.Client{}).Where("client_user_id = ?", identifier).Delete(api.Client{})
+	return apiClients, nil
 }
 
 // IsUnique is a method that determines whether a certain column value is unique in the api clients table
