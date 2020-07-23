@@ -40,14 +40,14 @@ func NewUserService(userRepository user.IUserRepository,
 func (service *Service) AddUser(opUser *entity.User, opPassword *entity.UserPassword) error {
 	err := service.userRepo.Create(opUser)
 	if err != nil {
-		return err
+		return errors.New("unable to add new user")
 	}
 	opPassword.UserID = opUser.UserID
 	err = service.passwordRepo.Create(opPassword)
 	if err != nil {
 		// Cleaning up if password is not add to the database
 		service.userRepo.Delete(opUser.UserID)
-		return err
+		return errors.New("unable to add new user")
 	}
 
 	return nil
@@ -122,22 +122,38 @@ func (service *Service) ValidateUserProfile(opUser *entity.User) entity.ErrMap {
 
 // FindUser is a method that find and return a user that matchs the identifier value
 func (service *Service) FindUser(identifier string) (*entity.User, error) {
-	if identifier == "" {
-		return nil, errors.New("empty identifier")
+
+	empty, _ := regexp.MatchString(`^\s*$`, identifier)
+	if empty {
+		return nil, errors.New("empty identifier used")
 	}
 
-	return service.userRepo.Find(identifier)
+	opUser, err := service.userRepo.Find(identifier)
+	if err != nil {
+		return nil, errors.New("no user found")
+	}
+	return opUser, nil
 }
 
 // UpdateUser is a method that updates a user in the system
-func (service *Service) UpdateUser(User *entity.User) error {
-	return service.userRepo.Update(User)
+func (service *Service) UpdateUser(opUser *entity.User) error {
+
+	err := service.userRepo.Update(opUser)
+	if err != nil {
+		return errors.New("unable to update user")
+	}
+	return nil
 }
 
 // UpdateUserSingleValue is a method that updates a single column entiry of a user
 func (service *Service) UpdateUserSingleValue(userID, columnName string, columnValue interface{}) error {
+
 	User := entity.User{UserID: userID}
-	return service.userRepo.UpdateValue(&User, columnName, columnValue)
+	err := service.userRepo.UpdateValue(&User, columnName, columnValue)
+	if err != nil {
+		return errors.New("unable to update user")
+	}
+	return nil
 }
 
 // DeleteUser is a method that deletes a user from the system including it's session's and password and other datas
@@ -151,7 +167,7 @@ func (service *Service) DeleteUser(userID string) (*entity.User, error) {
 
 	opUser, err := service.userRepo.Delete(userID)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("unable to delete user")
 	}
 
 	if opUser.ProfilePic != "" {

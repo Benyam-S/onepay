@@ -45,14 +45,14 @@ func (onepay *OnePay) SendViaQRCode(userID string, amount float64, redisClient *
 	moneyToken.SenderID = opWallet.UserID
 	moneyToken.SentAt = time.Now()
 
-	/* ++++ ++++ ++++ checkpoint - wallet ++++ ++++ ++++ */
+	/* ++++ ++++ +++ checkpoint - money token ++++ ++++ +++ */
 	tempMoneyToken := new(entity.MoneyToken)
 	tempMoneyToken.Amount = amount
 	tempMoneyToken.Method = entity.MethodTransactionQRCode
 	tempMoneyToken.SenderID = opWallet.UserID
 	tempMoneyToken.SentAt = time.Now()
 	logger.Must(onepay.Logger.LogMoneyToken(tempMoneyToken))
-	/* +++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++ */
+	/* ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++ */
 
 	err = onepay.MoneyTokenService.AddMoneyToken(moneyToken)
 	if err != nil {
@@ -63,18 +63,18 @@ func (onepay *OnePay) SendViaQRCode(userID string, amount float64, redisClient *
 		/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 		if innerErr != nil {
-			return nil, errors.New("wallet checkpoint error")
+			return nil, errors.New(entity.MoneyTokenCheckpointError)
 		}
 
-		/* +++++ ++++ ++++ ++++ checkpoint end ++++ ++++ ++++++ */
+		/* +++++ ++++ ++++ ++++ checkpoint end ++++ ++++ ++++ +++++ */
 		logger.Must(onepay.Logger.RemoveMoneyToken(tempMoneyToken))
-		/* +++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++++ */
+		/* +++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++++ */
 		return nil, err
 	}
 
-	/* +++++ ++++ ++++ ++++ checkpoint end ++++ ++++ ++++++ */
+	/* +++++ ++++ ++++ ++++ checkpoint end ++++ ++++ ++++ +++++ */
 	logger.Must(onepay.Logger.RemoveMoneyToken(tempMoneyToken))
-	/* +++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++++ */
+	/* +++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++++ */
 
 	// Just updating the users daily transaction limit
 	AddToDailyTransaction(userID, amount, redisClient)
@@ -143,19 +143,19 @@ func (onepay *OnePay) SendViaOnePayID(senderID, receiverID string,
 			onepay.AddUserHistory(senderID, receiverID, entity.MethodTransactionOnePayID, "",
 				amount, time.Now(), time.Now())
 
-			return errors.New("wallet checkpoint error")
+			return errors.New(entity.WalletCheckpointError)
 		}
 
-		/* ++++ ++++ ++++ ++++ checkpoint end ++++ ++++ ++++ ++++ */
+		/* +++++ +++++ +++++ checkpoint end +++++ +++++ +++++ */
 		logger.Must(onepay.Logger.RemoveWallet(tempOPWallet))
-		/* ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ */
+		/* ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++++ */
 
 		return err
 	}
 
-	/* ++++ ++++ ++++ ++++ checkpoint end ++++ ++++ ++++ ++++ */
+	/* +++++ +++++ +++++ checkpoint end +++++ +++++ +++++ */
 	logger.Must(onepay.Logger.RemoveWallet(tempOPWallet))
-	/* ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ */
+	/* ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++++ */
 
 	// Just updating the users daily transaction limit
 	AddToDailyTransaction(senderID, amount, redisClient)

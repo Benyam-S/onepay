@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"regexp"
 	"time"
 
 	"github.com/Benyam-S/onepay/api"
@@ -19,12 +20,41 @@ func (service *Service) AddAPIToken(apiToken *api.Token, apiClient *api.Client, 
 	apiToken.UserID = opUser.UserID
 
 	err := service.apiTokenRepo.Create(apiToken)
-	return err
+	if err != nil {
+		return errors.New("unable to add new api token")
+	}
+	return nil
 }
 
 // FindAPIToken is a method that find and returns an api token for the given identifier
-func (service *Service) FindAPIToken(identifier string) ([]*api.Token, error) {
-	return service.apiTokenRepo.Find(identifier)
+func (service *Service) FindAPIToken(identifier string) (*api.Token, error) {
+
+	empty, _ := regexp.MatchString(`^\s*$`, identifier)
+	if empty {
+		return nil, errors.New("empty identifier used")
+	}
+
+	apiToken, err := service.apiTokenRepo.Find(identifier)
+	if err != nil {
+		return nil, errors.New("api token not found")
+	}
+	return apiToken, nil
+}
+
+// SearchAPIToken is a method that searchs and returns a set of tokens for the given identifier
+func (service *Service) SearchAPIToken(identifier string) ([]*api.Token, error) {
+
+	empty, _ := regexp.MatchString(`^\s*$`, identifier)
+	if empty {
+		return nil, errors.New("empty identifier used")
+	}
+
+	apiTokens, err := service.apiTokenRepo.Search(identifier)
+	if err != nil {
+		return nil, errors.New("no api token found for the provided identifier")
+	}
+
+	return apiTokens, nil
 }
 
 // ValidateAPIToken is a method that checks if the api token is valid and have a valid api client
@@ -41,7 +71,7 @@ func (service *Service) ValidateAPIToken(apiToken *api.Token) error {
 
 	_, err := service.apiClientRepo.Find(apiToken.APIKey)
 	if err != nil {
-		return err
+		return errors.New("api token not found")
 	}
 
 	return nil
@@ -49,15 +79,30 @@ func (service *Service) ValidateAPIToken(apiToken *api.Token) error {
 
 // UpdateAPIToken is a method that updates a certain's api token
 func (service *Service) UpdateAPIToken(apiToken *api.Token) error {
-	return service.apiTokenRepo.Update(apiToken)
+
+	err := service.apiTokenRepo.Update(apiToken)
+	if err != nil {
+		return errors.New("unable to update api token")
+	}
+	return nil
 }
 
 // DeleteAPIToken is a method that deletes an api token from the system
 func (service *Service) DeleteAPIToken(identifier string) (*api.Token, error) {
-	return service.apiTokenRepo.Delete(identifier)
+
+	apiToken, err := service.apiTokenRepo.Delete(identifier)
+	if err != nil {
+		return nil, errors.New("unable to deleted api token")
+	}
+	return apiToken, nil
 }
 
 // DeleteAPITokens is a method that deletes a set of api tokens from the system
 func (service *Service) DeleteAPITokens(identifier string) ([]*api.Token, error) {
-	return service.apiTokenRepo.DeleteMultiple(identifier)
+
+	apiTokens, err := service.apiTokenRepo.DeleteMultiple(identifier)
+	if err != nil {
+		return nil, errors.New("unable to deleted api tokens")
+	}
+	return apiTokens, nil
 }

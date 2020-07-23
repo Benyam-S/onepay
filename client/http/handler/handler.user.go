@@ -130,6 +130,7 @@ func (handler *UserHandler) HandleVerifyOTP(w http.ResponseWriter, r *http.Reque
 
 // HandleFinishAddUser is a handler func that handles a request for adding password and constructing user account
 func (handler *UserHandler) HandleFinishAddUser(w http.ResponseWriter, r *http.Request) {
+
 	newOPPassword := new(entity.UserPassword)
 	newOPUser := new(entity.User)
 
@@ -234,10 +235,9 @@ func (handler *UserHandler) HandleLogout(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	serverSessions, err := handler.uService.FindSession(clientSession.SessionID)
+	serverSession, err := handler.uService.FindSession(clientSession.SessionID)
 	if err == nil {
 		// Instead of deleting the session deactivate them for further use
-		serverSession := serverSessions[0]
 		serverSession.Deactivated = true
 		handler.uService.UpdateSession(serverSession)
 	}

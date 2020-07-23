@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -14,7 +15,7 @@ type Client struct {
 	APIKey       string `gorm:"primary_key; unique; not null"`
 	APISecret    string `gorm:"not null"`
 	CallBack     string `gorm:"not null"`
-	APPName      string
+	APPName      string `gorm:"not null"`
 	Type         string `gorm:"not null"`
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
@@ -25,11 +26,12 @@ type Token struct {
 	AccessToken     string `gorm:"primary_key; not null; unique"`
 	UserID          string `gorm:"not null"`
 	APIKey          string `gorm:"not null"`
-	ExpiresAt       int64
-	DailyExpiration int64
+	Scopes          string `gorm:"not null"`
+	ExpiresAt       int64  `gorm:"not null"`
+	DailyExpiration int64  `gorm:"not null"`
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
-	Deactivated     bool // This can be used to identify a session that has been logged out
+	Deactivated     bool `gorm:"not null"` // This can be used to identify a session that has been logged out
 }
 
 // TableName is a method that set Tokens's table name to be `api_tokens`
@@ -49,6 +51,24 @@ func (apiToken Token) Valid() error {
 	}
 
 	return nil
+}
+
+// GetScopes is a method that returns the scope of an api token in slice form
+func (apiToken Token) GetScopes() []string {
+
+	scopes := make([]string, 0)
+	scopesString := apiToken.Scopes
+	if scopesString == "" {
+		return scopes
+	}
+
+	unfilteredScopes := strings.Split(scopesString, ",")
+	for _, unfileredScope := range unfilteredScopes {
+		scopes = append(scopes, strings.TrimSpace(unfileredScope))
+	}
+
+	return scopes
+
 }
 
 // PastDailyExpiration is a method that checks if the api token has exceeded daily expiration time

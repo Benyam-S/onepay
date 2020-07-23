@@ -9,10 +9,12 @@ import (
 type User struct {
 	UserID      string `gorm:"primary_key; unique; not null"`
 	FirstName   string `gorm:"not null"`
-	LastName    string
+	LastName    string `gorm:"not null"`
 	Email       string `gorm:"not null; unique"`
 	PhoneNumber string `gorm:"not null; unique"`
-	ProfilePic  string
+	ProfilePic  string `gorm:"not null"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // UserPassword is a type that defines a OnePay user password
@@ -24,60 +26,59 @@ type UserPassword struct {
 
 // UserWallet is a type that defines a OnePay user wallet
 type UserWallet struct {
-	UserID string `gorm:"primary_key; unique; not null"`
-	Amount float64
+	UserID string  `gorm:"primary_key; unique; not null"`
+	Amount float64 `gorm:"not null"`
 }
 
 // UserHistory is a type that defines a OnePay user's history
 type UserHistory struct {
-	ID         int `gorm:"primary_key; unique; not null"`
-	SenderID   string
-	ReceiverID string
+	ID         int    `gorm:"primary_key; unique; not null"`
+	SenderID   string `gorm:"not null"`
+	ReceiverID string `gorm:"not null"`
 	SentAt     time.Time
 	ReceivedAt time.Time
-	Method     string
-	Code       string
-	Amount     float64
+	Method     string  `gorm:"not null"`
+	Code       string  `gorm:"not null"`
+	Amount     float64 `gorm:"not null"`
 }
 
 // MoneyToken is a type that defines a token generated for qr code
 type MoneyToken struct {
 	Code           string `gorm:"primary_key; unique; not null"`
-	SenderID       string
+	SenderID       string `gorm:"not null"`
 	SentAt         time.Time
-	Amount         float64
+	Amount         float64 `gorm:"not null"`
 	ExpirationDate time.Time
-	Method         string
+	Method         string `gorm:"not null"`
 }
 
 // LinkedAccount is a type that defines an account that is linked with OnePay account
 type LinkedAccount struct {
 	ID              string `gorm:"primary_key; unique; not null"`
-	UserID          string
-	AccountProvider string
-	AccountID       string
-	AccessToken     string
+	UserID          string `gorm:"not null"`
+	AccountProvider string `gorm:"not null"`
+	AccountID       string `gorm:"not null"`
+	AccessToken     string `gorm:"not null"`
 }
 
 // DeletedUser is a type that defines a OnePay user that has been deleted
 // This struct is used to store and identify a pervious user
 type DeletedUser struct {
 	UserID      string `gorm:"primary_key; unique; not null"`
-	FirstName   string
-	LastName    string
-	Email       string
-	PhoneNumber string
-	ProfilePic  string
+	FirstName   string `gorm:"not null"`
+	LastName    string `gorm:"not null"`
+	Email       string `gorm:"not null"`
+	PhoneNumber string `gorm:"not null"`
 }
 
 // DeletedLinkedAccount is a type that defines an account that was linked with OnePay account
 // It can be used which account has been linked to which
 type DeletedLinkedAccount struct {
 	ID              string `gorm:"primary_key; unique; not null"`
-	UserID          string
-	AccountProvider string
-	AccountID       string
-	AccessToken     string
+	UserID          string `gorm:"not null"`
+	AccountProvider string `gorm:"not null"`
+	AccountID       string `gorm:"not null"`
+	AccessToken     string `gorm:"not null"`
 }
 
 // TableName is a method that defines the database table name of the user history struct

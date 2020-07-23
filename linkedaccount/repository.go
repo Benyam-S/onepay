@@ -11,5 +11,4 @@ type ILinkedAccountRepository interface {
 	UpdateValue(linkedAccount *entity.LinkedAccount, columnName string, columnValue interface{}) error
 	Delete(identifier string) (*entity.LinkedAccount, error)
 	DeleteMultiple(identifier string) ([]*entity.LinkedAccount, error)
-	IsUnique(columnName string, columnValue interface{}) bool
 }

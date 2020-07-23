@@ -1,0 +1,436 @@
+package handler
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/Benyam-S/onepay/api"
+	"github.com/Benyam-S/onepay/entity"
+	"github.com/Benyam-S/onepay/tools"
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
+	"golang.org/x/crypto/bcrypt"
+)
+
+// HandleInitLoginApp is a handler func that handles a request for logging into the system using OnePay app
+func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http.Request) {
+
+	format := mux.Vars(r)["format"]
+	identifier := r.FormValue("identifier")
+	password := r.FormValue("password")
+
+	// Checking if the user exists
+	opUser, err := handler.uService.FindUser(identifier)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// checking for false attempts
+	falseAttempts, _ := tools.GetValue(handler.redisClient, entity.PasswordFault+opUser.UserID)
+	attempts, _ := strconv.ParseInt(falseAttempts, 0, 64)
+	if attempts >= 5 {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "too many attempts try after 24 hours"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
+	opPassword, err := handler.uService.FindPassword(opUser.UserID)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Comparing the hashed password with the given password
+	hasedPassword, _ := base64.StdEncoding.DecodeString(opPassword.Password)
+	err = bcrypt.CompareHashAndPassword(hasedPassword, []byte(password+opPassword.Salt))
+	if err != nil {
+
+		// registring fault
+		tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
+			fmt.Sprintf("%d", attempts+1), time.Hour*24)
+
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	var apiClient *api.Client
+	apiClients, err := handler.uService.SearchAPIClient(opUser.UserID, entity.APIClientTypeInternal)
+	if err != nil {
+		newAPIClient := new(api.Client)
+		newAPIClient.APPName = entity.APIClientAppNameInternal
+		newAPIClient.Type = entity.APIClientTypeInternal
+		err = handler.uService.AddAPIClient(newAPIClient, opUser)
+		if err != nil {
+			http.Error(w, "unable to add an internal api client", http.StatusInternalServerError)
+			return
+		}
+		apiClient = newAPIClient
+	} else {
+		apiClient = apiClients[0]
+	}
+
+	newAPIToken := new(api.Token)
+	newAPIToken.Scopes = entity.ScopeAll
+	err = handler.uService.AddAPIToken(newAPIToken, apiClient, opUser)
+	if err != nil {
+		http.Error(w, "unable to create an api token", http.StatusInternalServerError)
+		return
+	}
+
+	// clearing user's false attempts
+	tools.RemoveValues(handler.redisClient, entity.PasswordFault+opUser.UserID)
+
+	output, _ := tools.MarshalIndent(map[string]string{"access_token": newAPIToken.AccessToken,
+		"api_key": apiClient.APIKey, "type": "Bearer"}, "", "\t", format)
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+
+}
+
+// HandleLogout is a handler func that handles a logout request
+func (handler *UserAPIHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	apiToken, ok := ctx.Value(entity.Key("onepay_api_token")).(*api.Token)
+
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Deactivating the api token
+	apiToken.Deactivated = true
+	handler.uService.UpdateAPIToken(apiToken)
+
+}
+
+// HandleRefreshAPITokenDE is a handler func that handles a request for refreshing the daily expiration date of
+// a given api token
+func (handler *UserAPIHandler) HandleRefreshAPITokenDE(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
+
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// checking for false attempts
+	falseAttempts, _ := tools.GetValue(handler.redisClient, entity.PasswordFault+opUser.UserID)
+	attempts, _ := strconv.ParseInt(falseAttempts, 0, 64)
+	if attempts >= 5 {
+		http.Error(w, "too many attempts try after 24 hours", http.StatusBadRequest)
+		return
+	}
+
+	password := r.FormValue("password")
+
+	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
+	opPassword, err := handler.uService.FindPassword(opUser.UserID)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Comparing the hashed password with the given password
+	hasedPassword, _ := base64.StdEncoding.DecodeString(opPassword.Password)
+	err = bcrypt.CompareHashAndPassword(hasedPassword, []byte(password+opPassword.Salt))
+	if err != nil {
+
+		// registring fault
+		tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
+			fmt.Sprintf("%d", attempts+1), time.Hour*24)
+
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	apiToken, ok := ctx.Value(entity.Key("onepay_api_token")).(*api.Token)
+
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// clearing user's false attempts
+	tools.RemoveValues(handler.redisClient, entity.PasswordFault+opUser.UserID)
+
+	// Refershing the daily expiration date
+	apiToken.DailyExpiration = time.Now().Unix()
+	handler.uService.UpdateAPIToken(apiToken)
+
+}
+
+// HandleAuthentication is a handler func that handles a request for authenticating an api client
+func (handler *UserAPIHandler) HandleAuthentication(w http.ResponseWriter, r *http.Request) {
+
+	format := mux.Vars(r)["format"]
+	apiKey := r.FormValue("client_id")
+	redirectURI := r.FormValue("redirect_uri")
+	responseType := r.FormValue("response_type")
+	scopesString := r.FormValue("scope")
+	state := r.FormValue("state")
+
+	emptyState, _ := regexp.MatchString(`^\s*$`, state)
+
+	if emptyState {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "empty state value used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	if responseType != "code" {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "response type must be set to code"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	scopesSlice := strings.Split(scopesString, " ")
+	for _, scope := range scopesSlice {
+		if !api.ValidScope(scope) {
+			output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid scope requested"}, "", "\t", format)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(output)
+			return
+		}
+	}
+
+	apiClient, err := handler.uService.FindAPIClient(apiKey)
+	if err != nil {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	if apiClient.CallBack != redirectURI {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "unregistred redirect uri used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	nonce := uuid.Must(uuid.NewRandom())
+	scopes := strings.Join(scopesSlice, ", ")
+
+	tempOutput, _ := json.Marshal(map[string]string{"api_key": apiKey, "scope": scopes, "state": state})
+	err = tools.SetValue(handler.redisClient, nonce.String(), string(tempOutput), time.Hour*6)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	// you should display a login page with nonce
+
+	output, _ := tools.MarshalIndent(map[string]string{"nonce": nonce.String()}, "", "\t", format)
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+	return
+
+}
+
+// HandleInitAuthorization is a handler func that initialize the request for authorizing a user
+func (handler *UserAPIHandler) HandleInitAuthorization(w http.ResponseWriter, r *http.Request) {
+
+	format := mux.Vars(r)["format"]
+	nonce := r.FormValue("nonce")
+	identifier := r.FormValue("identifier")
+	password := r.FormValue("password")
+
+	// Checking for empty value
+	if len(nonce) == 0 {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Retriving value from redis store
+	storedDataS, err := tools.GetValue(handler.redisClient, nonce)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Checking if the user exists
+	opUser, err := handler.uService.FindUser(identifier)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// checking for false attempts
+	falseAttempts, _ := tools.GetValue(handler.redisClient, entity.PasswordFault+opUser.UserID)
+	attempts, _ := strconv.ParseInt(falseAttempts, 0, 64)
+	if attempts >= 5 {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "too many attempts try after 24 hours"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
+	opPassword, err := handler.uService.FindPassword(opUser.UserID)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Comparing the hashed password with the given password
+	hasedPassword, _ := base64.StdEncoding.DecodeString(opPassword.Password)
+	err = bcrypt.CompareHashAndPassword(hasedPassword, []byte(password+opPassword.Salt))
+	if err != nil {
+
+		// registring fault
+		tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
+			fmt.Sprintf("%d", attempts+1), time.Hour*24)
+
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// you should display a check your scope page
+
+	// updating the previously stored nonce data
+	storedData := make(map[string]string)
+	json.Unmarshal([]byte(storedDataS), &storedData)
+	storedData["user_id"] = opUser.UserID
+
+	tempOutput, _ := json.Marshal(storedData)
+	err = tools.SetValue(handler.redisClient, nonce, string(tempOutput), time.Hour*6)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	// clearing user's false attempts
+	tools.RemoveValues(handler.redisClient, entity.PasswordFault+opUser.UserID)
+
+	output, _ := tools.MarshalIndent(map[string]string{"nonce": nonce}, "", "\t", format)
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+	return
+
+}
+
+// HandleFinishAuthorization is a handler func that finishes the authorization process
+func (handler *UserAPIHandler) HandleFinishAuthorization(w http.ResponseWriter, r *http.Request) {
+
+	format := mux.Vars(r)["format"]
+	nonce := r.FormValue("nonce")
+	authorized := r.FormValue("authorized")
+
+	// Checking for empty value
+	if len(nonce) == 0 {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Retriving value from redis store
+	storedDataS, err := tools.GetValue(handler.redisClient, nonce)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	if authorized != "true" {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	code := uuid.Must(uuid.NewRandom()).String()
+
+	err = tools.SetValue(handler.redisClient, code, nonce, time.Hour*6)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	storedData := make(map[string]string)
+	json.Unmarshal([]byte(storedDataS), &storedData)
+
+	output, _ := tools.MarshalIndent(map[string]string{"code": code, "state": storedData["state"]},
+		"", "\t", format)
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+	return
+}
+
+// HandleCodeExchange is a handler func that enables an api client to exchange code for access token
+func (handler *UserAPIHandler) HandleCodeExchange(w http.ResponseWriter, r *http.Request) {
+
+	format := mux.Vars(r)["format"]
+	code := r.FormValue("code")
+	grantType := r.FormValue("grant_type")
+	apiSecret := r.FormValue("client_secret")
+
+	// Checking for empty value
+	if len(code) == 0 {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	if grantType != "authorization_code" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Retriving value from redis store
+	storedNonce, err := tools.GetValue(handler.redisClient, code)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// getting the stored value using the nonce
+	storedDataS, err := tools.GetValue(handler.redisClient, storedNonce)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	storedData := make(map[string]string)
+	json.Unmarshal([]byte(storedDataS), &storedData)
+
+	apiClient, err := handler.uService.FindAPIClient(storedData["api_key"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if apiClient.APISecret != apiSecret {
+		http.Error(w, "invalid client secret used", http.StatusBadRequest)
+		return
+	}
+
+	opUser := new(entity.User)
+	opUser.UserID = storedData["user_id"]
+
+	newAPIToken := new(api.Token)
+	newAPIToken.Scopes = storedData["scope"]
+
+	err = handler.uService.AddAPIToken(newAPIToken, apiClient, opUser)
+	if err != nil {
+		http.Error(w, "unable to create an api token", http.StatusInternalServerError)
+		return
+	}
+
+	// Removing temporary data
+	tools.RemoveValues(handler.redisClient, code)
+	tools.RemoveValues(handler.redisClient, storedNonce)
+
+	output, _ := tools.MarshalIndent(map[string]string{"access_token": newAPIToken.AccessToken,
+		"type": "Bearer"}, "", "\t", format)
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+
+}

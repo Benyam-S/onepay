@@ -1,6 +1,9 @@
 package service
 
 import (
+	"errors"
+	"regexp"
+
 	"github.com/Benyam-S/onepay/entity"
 	"github.com/Benyam-S/onepay/history"
 )
@@ -17,11 +20,22 @@ func NewHistoryService(historyRepository history.IHistoryRepository) history.ISe
 
 // AddHistory is a method that adds a new user history to the system
 func (service *Service) AddHistory(newOPHistory *entity.UserHistory) error {
-	return service.historyRepo.Create(newOPHistory)
+
+	err := service.historyRepo.Create(newOPHistory)
+	if err != nil {
+		return errors.New("unable to add new history")
+	}
+	return nil
 }
 
 // SearchHistories is a method that search and returns a set of user's histories that matchs the identifier value
-func (service *Service) SearchHistories(key, orderBy string, methods []string, pageNum int, columns ...string) []*entity.UserHistory {
+func (service *Service) SearchHistories(key, orderBy string, methods []string, pageNum int64, columns ...string) []*entity.UserHistory {
+
+	empty, _ := regexp.MatchString(`^\s*$`, key)
+	if empty {
+		return []*entity.UserHistory{}
+	}
+
 	return service.historyRepo.Search(key, orderBy, methods, pageNum, columns...)
 }
 
@@ -32,5 +46,10 @@ func (service *Service) AllUserHistories(userID string) []*entity.UserHistory {
 
 // FindHistory is a method that finds a certain history from the system using the identifer
 func (service *Service) FindHistory(identifier int) (*entity.UserHistory, error) {
-	return service.historyRepo.Find(identifier)
+
+	history, err := service.historyRepo.Find(identifier)
+	if err != nil {
+		return nil, errors.New("history not found")
+	}
+	return history, nil
 }

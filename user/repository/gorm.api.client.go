@@ -37,11 +37,27 @@ func (repo *APIClientRepository) Create(newAPIClient *api.Client) error {
 }
 
 // Find is a method that find an api client from the database using an identifier.
-// In Find() client_user_id and api_key can be used as a key
-func (repo *APIClientRepository) Find(identifier string) ([]*api.Client, error) {
+// In Find() api_key is only used as a key
+func (repo *APIClientRepository) Find(identifier string) (*api.Client, error) {
+
+	apiClient := new(api.Client)
+	err := repo.conn.Model(apiClient).
+		Where("api_key = ?", identifier).
+		First(apiClient).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return apiClient, nil
+}
+
+// Search is a method that searchs an api client from the database using an identifier.
+// In Search() client_user_id  is only used as a key
+func (repo *APIClientRepository) Search(identifier string) ([]*api.Client, error) {
 	var apiClients []*api.Client
 	err := repo.conn.Model(api.Client{}).
-		Where("client_user_id = ? || api_key = ?", identifier, identifier).
+		Where("client_user_id = ?", identifier).
 		Find(&apiClients).Error
 
 	if err != nil {

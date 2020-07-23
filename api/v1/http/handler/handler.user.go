@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -144,16 +143,18 @@ func (handler *UserAPIHandler) HandleVerifyOTP(w http.ResponseWriter, r *http.Re
 // HandleFinishAddUser is a handler func that handles a request for adding password and constructing user account
 // This is different from the client HandleFinishAddUser because it will return an api client at the end of the request
 func (handler *UserAPIHandler) HandleFinishAddUser(w http.ResponseWriter, r *http.Request) {
+
 	newOPPassword := new(entity.UserPassword)
 	newOPUser := new(entity.User)
 
+	format := mux.Vars(r)["format"]
 	nonce := r.FormValue("nonce")
 	newOPPassword.Password = r.FormValue("password")
 	vPassword := r.FormValue("vPassword")
 
 	err := handler.uService.VerifyUserPassword(newOPPassword, vPassword)
 	if err != nil {
-		output, _ := json.Marshal(map[string]string{"error": err.Error()})
+		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -161,7 +162,7 @@ func (handler *UserAPIHandler) HandleFinishAddUser(w http.ResponseWriter, r *htt
 
 	storedOPUser, err := tools.GetValue(handler.redisClient, nonce)
 	if err != nil {
-		output, _ := json.Marshal(map[string]string{"error": "invalid token used"})
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid token used"}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -200,89 +201,17 @@ func (handler *UserAPIHandler) HandleFinishAddUser(w http.ResponseWriter, r *htt
 	}
 
 	newAPIToken := new(api.Token)
+	newAPIToken.Scopes = entity.ScopeAll
 	err = handler.uService.AddAPIToken(newAPIToken, newAPIClient, newOPUser)
 	if err != nil {
 		http.Error(w, "unable to create an api token", http.StatusInternalServerError)
 		return
 	}
 
-	output, _ := json.Marshal(map[string]interface{}{"api_token": newAPIToken.AccessToken, "type": "Bearer"})
+	output, _ := tools.MarshalIndent(map[string]string{"access_token": newAPIToken.AccessToken,
+		"type": "Bearer", "api_key": newAPIClient.APIKey}, "", "\t", format)
 	w.WriteHeader(http.StatusOK)
 	w.Write(output)
-}
-
-/* +++++++++++++++++++++++++++++++++++++++++++++ LOG IN & LOG OUT +++++++++++++++++++++++++++++++++++++++++++++ */
-
-// HandleInitLoginApp is a handler func that handles a request for logging into the system using OnePay app
-func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http.Request) {
-	identifier := r.FormValue("identifier")
-	password := r.FormValue("password")
-
-	// Checking if the user exists
-	opUser, err := handler.uService.FindUser(identifier)
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
-	opPassword, err := handler.uService.FindPassword(opUser.UserID)
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	// Comparing the hashed password with the given password
-	hasedPassword, _ := base64.StdEncoding.DecodeString(opPassword.Password)
-	err = bcrypt.CompareHashAndPassword(hasedPassword, []byte(password+opPassword.Salt))
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	var apiClient *api.Client
-	apiClients, err := handler.uService.FindAPIClient(opUser.UserID, entity.APIClientTypeInternal)
-	if err != nil {
-		newAPIClient := new(api.Client)
-		newAPIClient.APPName = entity.APIClientAppNameInternal
-		newAPIClient.Type = entity.APIClientTypeInternal
-		err = handler.uService.AddAPIClient(newAPIClient, opUser)
-		if err != nil {
-			http.Error(w, "unable to add an internal api client", http.StatusInternalServerError)
-			return
-		}
-		apiClient = newAPIClient
-	} else {
-		apiClient = apiClients[0]
-	}
-
-	newAPIToken := new(api.Token)
-	err = handler.uService.AddAPIToken(newAPIToken, apiClient, opUser)
-	if err != nil {
-		http.Error(w, "unable to create an api token", http.StatusInternalServerError)
-		return
-	}
-
-	output, _ := json.Marshal(map[string]interface{}{"api_token": newAPIToken.AccessToken, "type": "Bearer"})
-	w.WriteHeader(http.StatusOK)
-	w.Write(output)
-
-}
-
-// HandleLogout is a handler func that handles a logout request
-func (handler *UserAPIHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	apiToken, ok := ctx.Value(entity.Key("onepay_api_token")).(*api.Token)
-
-	if !ok {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	// Deactivating the api token
-	apiToken.Deactivated = true
-	handler.uService.UpdateAPIToken(apiToken)
-
 }
 
 /* +++++++++++++++++++++++++++++++++++++++++++ GETTING PROFILE DATA +++++++++++++++++++++++++++++++++++++++++++ */
@@ -298,8 +227,11 @@ func (handler *UserAPIHandler) HandleGetProfile(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	output, _ := json.Marshal(opUser)
-	w.WriteHeader(http.StatusBadRequest)
+	// the format can a json or xml
+	format := mux.Vars(r)["format"]
+
+	output, _ := tools.MarshalIndent(opUser, "", "\t", format)
+	w.WriteHeader(http.StatusOK)
 	w.Write(output)
 	return
 
@@ -341,6 +273,8 @@ func (handler *UserAPIHandler) HandleUpateProfile(w http.ResponseWriter, r *http
 		return
 	}
 
+	format := mux.Vars(r)["format"]
+
 	opUser.FirstName = r.FormValue("first_name")
 	opUser.LastName = r.FormValue("last_name")
 	opUser.Email = r.FormValue("email")
@@ -349,7 +283,7 @@ func (handler *UserAPIHandler) HandleUpateProfile(w http.ResponseWriter, r *http
 	errMap := handler.uService.ValidateUserProfile(opUser)
 
 	if errMap != nil {
-		output, _ := json.Marshal(errMap.StringMap())
+		output, _ := tools.MarshalIndent(errMap.StringMap(), "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -372,6 +306,8 @@ func (handler *UserAPIHandler) HandleChangePassword(w http.ResponseWriter, r *ht
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
+
+	format := mux.Vars(r)["format"]
 
 	oldPassword := r.FormValue("old_password")
 	newPassword := r.FormValue("new_password")
@@ -396,7 +332,7 @@ func (handler *UserAPIHandler) HandleChangePassword(w http.ResponseWriter, r *ht
 
 	err = handler.uService.VerifyUserPassword(newOPPassword, vPassword)
 	if err != nil {
-		output, _ := json.Marshal(map[string]string{"error": err.Error()})
+		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -420,6 +356,8 @@ func (handler *UserAPIHandler) HandleUploadPhoto(w http.ResponseWriter, r *http.
 		return
 	}
 
+	format := mux.Vars(r)["format"]
+
 	// checking for multipart form data, the image has to be sent in multipart form data
 	fm, fh, err := r.FormFile("profile_pic")
 	if err != nil {
@@ -435,8 +373,7 @@ func (handler *UserAPIHandler) HandleUploadPhoto(w http.ResponseWriter, r *http.
 
 	// checking if the sent file is image
 	if !strings.HasPrefix(tempFileType, "image") {
-		errMap := entity.ErrMap{"error": errors.New("invalid format sent")}
-		output, _ := json.Marshal(errMap.StringMap())
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid format sent"}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -444,8 +381,8 @@ func (handler *UserAPIHandler) HandleUploadPhoto(w http.ResponseWriter, r *http.
 
 	// checking the file sent doesn't exceed the size limit
 	if fh.Size > 5000000 {
-		errMap := entity.ErrMap{"error": errors.New("image exceeds the file size limit, 5MB")}
-		output, _ := json.Marshal(errMap.StringMap())
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "image exceeds the file size limit, 5MB"},
+			"", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return

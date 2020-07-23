@@ -13,7 +13,6 @@ type IUserRepository interface {
 	Update(opUser *entity.User) error
 	UpdateValue(opUser *entity.User, columnName string, columnValue interface{}) error
 	Delete(identifier string) (*entity.User, error)
-	CountUsers() int
 	IsUnique(columnName string, columnValue interface{}) bool
 }
 
@@ -28,7 +27,8 @@ type IPasswordRepository interface {
 // ISessionRepository is an interface that defines all the repository methods of a user's server side session struct
 type ISessionRepository interface {
 	Create(newOPSession *session.ServerSession) error
-	Find(identifier string) ([]*session.ServerSession, error)
+	Find(identifier string) (*session.ServerSession, error)
+	Search(identifier string) ([]*session.ServerSession, error)
 	Update(opSession *session.ServerSession) error
 	Delete(identifier string) (*session.ServerSession, error)
 	DeleteMultiple(identifier string) ([]*session.ServerSession, error)
@@ -37,7 +37,8 @@ type ISessionRepository interface {
 // IAPIClientRepository is an interface that defines all the repository methods of an api client struct
 type IAPIClientRepository interface {
 	Create(newAPIClient *api.Client) error
-	Find(identifier string) ([]*api.Client, error)
+	Find(identifier string) (*api.Client, error)
+	Search(identifier string) ([]*api.Client, error)
 	Update(apiClient *api.Client) error
 	Delete(identifier string) (*api.Client, error)
 	DeleteMultiple(identifier string) ([]*api.Client, error)
@@ -46,7 +47,8 @@ type IAPIClientRepository interface {
 // IAPITokenRepository is an interface that defines all the repository methods of an api token struct
 type IAPITokenRepository interface {
 	Create(newAPIToken *api.Token) error
-	Find(identifier string) ([]*api.Token, error)
+	Find(identifier string) (*api.Token, error)
+	Search(identifier string) ([]*api.Token, error)
 	Update(apiToken *api.Token) error
 	Delete(identifier string) (*api.Token, error)
 	DeleteMultiple(identifier string) ([]*api.Token, error)

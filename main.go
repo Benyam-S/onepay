@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -48,6 +49,8 @@ var (
 
 	userHandler    *urHandler.UserHandler
 	userAPIHandler *urAPIHandler.UserAPIHandler
+
+	onepay *app.OnePay
 )
 
 // SystemConfig is a type that defines a server system configuration file
@@ -126,7 +129,7 @@ func initServer() {
 	dataLogger := logger.NewLogger(path)
 	channel := make(chan string)
 
-	onepay := app.NewApp(walletService, historyService, linkedAccountService, moneyTokenService,
+	onepay = app.NewApp(walletService, historyService, linkedAccountService, moneyTokenService,
 		dataLogger, channel)
 
 	userHandler = urHandler.NewUserHandler(userService, redisClient)
@@ -154,7 +157,6 @@ func initDB() {
 	fmt.Println("Connected to the database: mysql @GORM")
 
 	// Creating and Migrating tables from the structurs
-	mysqlDB.AutoMigrate(&session.ServerSession{})
 	mysqlDB.AutoMigrate(&entity.UserPassword{})
 	mysqlDB.AutoMigrate(&entity.User{})
 	mysqlDB.AutoMigrate(&session.ServerSession{})
@@ -167,14 +169,15 @@ func initDB() {
 	mysqlDB.AutoMigrate(&entity.DeletedUser{})
 	mysqlDB.AutoMigrate(&entity.DeletedLinkedAccount{})
 
-	mysqlDB.Model(&entity.UserPassword{}).AddForeignKey("user_id", "users(user_id)", "CASCADE", "CASCADE")
-	mysqlDB.Model(&session.ServerSession{}).AddForeignKey("user_id", "users(user_id)", "CASCADE", "CASCADE")
-	mysqlDB.Model(&api.Client{}).AddForeignKey("client_user_id", "users(user_id)", "CASCADE", "CASCADE")
-	mysqlDB.Model(&api.Token{}).AddForeignKey("api_key", "api_clients(api_key)", "CASCADE", "CASCADE")
-	mysqlDB.Model(&api.Token{}).AddForeignKey("user_id", "users(user_id)", "CASCADE", "CASCADE")
-	mysqlDB.Model(&entity.UserWallet{}).AddForeignKey("user_id", "users(user_id)", "CASCADE", "CASCADE")
-	mysqlDB.Model(&entity.LinkedAccount{}).AddForeignKey("user_id", "users(user_id)", "CASCADE", "CASCADE")
-	mysqlDB.Model(&entity.MoneyToken{}).AddForeignKey("sender_id", "users(user_id)", "CASCADE", "CASCADE")
+	// ----------------------------- This must be changed -----------------------------
+	count := 0
+	mysqlDB.Exec("CREATE TABLE IF NOT EXISTS extras (total_user_count int)")
+	mysqlDB.Table("extras").Count(&count)
+	if count != 1 {
+		mysqlDB.Exec("DELETE FROM extras")
+		mysqlDB.Exec("INSERT INTO extras VALUES (0)")
+	}
+	// --------------------------------------------------------------------------------
 }
 
 func main() {
@@ -195,6 +198,38 @@ func main() {
 	router.HandleFunc("/logout", tools.MiddlewareFactory(userHandler.HandleLogout, userHandler.Authorization, userHandler.SessionAuthentication))
 
 	v1.Start(userAPIHandler, router)
+
+	go func() {
+		for {
+			time.Sleep(time.Minute * 30)
+			onepay.Channel <- "all"
+		}
+	}()
+
+	go func() {
+
+		for {
+
+			value := <-onepay.Channel
+			switch value {
+
+			case "all":
+				onepay.ReloadMoneyToken()
+				onepay.ReloadWallet()
+				onepay.ReloadHistory()
+
+			case "reload_money_token":
+				onepay.ReloadMoneyToken()
+
+			case "reload_wallet":
+				onepay.ReloadWallet()
+				fallthrough
+
+			case "reload_history":
+				onepay.ReloadHistory()
+			}
+		}
+	}()
 
 	http.ListenAndServe(":8080", router)
 }

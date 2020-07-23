@@ -58,12 +58,12 @@ func (onepay *OnePay) ReceiveViaQRCode(receiverID string, code string) error {
 		onepay.AddUserHistory(moneyToken.SenderID, receiverID, entity.MethodTransactionQRCode, moneyToken.Code,
 			moneyToken.Amount, moneyToken.SentAt, time.Now())
 
-		return errors.New("wallet checkpoint error")
+		return errors.New(entity.WalletCheckpointError)
 	}
 
-	/* +++++ +++++ +++++ checkpoint end +++++ ++++ ++++ +++++ */
+	/* +++++ +++++ +++++ checkpoint end +++++ +++++ +++++ */
 	logger.Must(onepay.Logger.RemoveWallet(tempOPWallet))
-	/* ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++ ++++ +++++ */
+	/* ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++++ */
 
 	// Adding history for the received token
 	return onepay.AddUserHistory(moneyToken.SenderID, receiverID, entity.MethodTransactionQRCode, moneyToken.Code,

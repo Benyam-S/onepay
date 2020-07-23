@@ -115,19 +115,19 @@ func (onepay *OnePay) PayViaQRCode(receiverID string, code string, redisClient *
 			onepay.AddUserHistory(receiverID, moneyToken.SenderID, entity.MethodPaymentQRCode, moneyToken.Code,
 				moneyToken.Amount, moneyToken.SentAt, time.Now())
 
-			return errors.New("wallet checkpoint error")
+			return errors.New(entity.WalletCheckpointError)
 		}
 
-		/* ++++ ++++ ++++ +++ checkpoint end +++ ++++ ++++ ++++ */
+		/* +++++ +++++ +++++ checkpoint end +++++ +++++ +++++ */
 		logger.Must(onepay.Logger.RemoveWallet(tempOPWallet))
-		/* +++++ +++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++++ */
+		/* ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++++ */
 
 		return err
 	}
 
-	/* ++++ ++++ ++++ +++ checkpoint end +++ ++++ ++++ ++++ */
+	/* +++++ +++++ +++++ checkpoint end +++++ +++++ +++++ */
 	logger.Must(onepay.Logger.RemoveWallet(tempOPWallet))
-	/* +++++ +++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++++ */
+	/* ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++++ */
 
 	// Just updating the users daily transaction limit
 	AddToDailyTransaction(receiverID, moneyToken.Amount, redisClient)

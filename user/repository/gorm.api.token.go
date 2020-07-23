@@ -29,11 +29,27 @@ func (repo *APITokenRepository) Create(newAPIToken *api.Token) error {
 }
 
 // Find is a method that find an api token from the database using an identifier.
-// In Find() access_token and api_key can be used as a key
-func (repo *APITokenRepository) Find(identifier string) ([]*api.Token, error) {
+// In Find() access_token is only used as a key
+func (repo *APITokenRepository) Find(identifier string) (*api.Token, error) {
+
+	apiToken := new(api.Token)
+	err := repo.conn.Model(apiToken).
+		Where("access_token = ?", identifier).
+		First(apiToken).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return apiToken, nil
+}
+
+// Search is a method that returns a set api tokens that match the given identifier
+// In Search() api_key is only used as a key
+func (repo *APITokenRepository) Search(identifier string) ([]*api.Token, error) {
 	var apiTokens []*api.Token
 	err := repo.conn.Model(api.Token{}).
-		Where("access_token = ? || api_key = ?", identifier, identifier).
+		Where("api_key = ?", identifier).
 		Find(&apiTokens).Error
 
 	if err != nil {

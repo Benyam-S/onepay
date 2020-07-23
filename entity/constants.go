@@ -35,3 +35,21 @@ const WithdrawBaseLimit = "withdraw_base_limit"
 
 // DailyTransactionLimit is a constant for holding the daily_transaction_limit name
 const DailyTransactionLimit = "daily_transaction_limit"
+
+// WalletCheckpointError is a constant for holding the error value 'wallet checkpoint error'
+const WalletCheckpointError = "wallet checkpoint error"
+
+// MoneyTokenCheckpointError is a constant for holding the error value 'money token checkpoint error'
+const MoneyTokenCheckpointError = "money token checkpoint error"
+
+// HistoryCheckpointError is a constant for holding the error value 'history checkpoint error'
+const HistoryCheckpointError = "history checkpoint error"
+
+// ScopeAll is a constant that holds all usable scope values
+const ScopeAll = "profile, send, receive, pay, wallet, history, linkedaccount, moneytoken"
+
+// PasswordFault is a constant that holds the value password_fault-
+const PasswordFault = "password_fault-"
+
+// ReceiveFault is a constant that holds the value receive_fault-
+const ReceiveFault = "receive_fault-"

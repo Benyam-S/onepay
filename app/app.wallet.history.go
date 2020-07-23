@@ -11,15 +11,16 @@ import (
 )
 
 // UserHistory is a method that returns the user history only
-func (onepay *OnePay) UserHistory(userID string, pagenation int, viewBys ...string) []*entity.UserHistory {
+func (onepay *OnePay) UserHistory(userID string, pagenation int64, viewBys ...string) []*entity.UserHistory {
 
 	orderBy := "id"
 	opHistories := make([]*entity.UserHistory, 0)
-	searchColumns := make([]string, 0)
-	methods := make([]string, 0)
 	length := len(viewBys)
 
 	for _, viewBy := range viewBys {
+
+		searchColumns := make([]string, 0)
+		methods := make([]string, 0)
 
 		if viewBy == "transaction_received" {
 			if length == 1 {
@@ -69,6 +70,9 @@ func (onepay *OnePay) UserHistory(userID string, pagenation int, viewBys ...stri
 			searchColumns = append(searchColumns, "sender_id", "receiver_id")
 			methods = append(methods, entity.MethodTransactionOnePayID,
 				entity.MethodTransactionQRCode, entity.MethodPaymentQRCode)
+		} else {
+			// If it is unkown view by
+			continue
 		}
 
 		result := onepay.HistoryService.SearchHistories(userID, orderBy, methods, pagenation, searchColumns...)
@@ -88,6 +92,9 @@ func (onepay *OnePay) DrainWallet(userID, linkedAccountID string) error {
 	}
 
 	amount := opWallet.Amount
+	if amount <= 0 {
+		return errors.New("can not drain empty wallet")
+	}
 	// draning the account
 	opWallet.Amount = 0
 
@@ -100,7 +107,7 @@ func (onepay *OnePay) DrainWallet(userID, linkedAccountID string) error {
 		return errors.New("linked account doesn't belong to the provided user")
 	}
 
-	err = middleman.RefillAccount(linkedAccount.AccountID, linkedAccount.AccessToken, amount)
+	err = onepay.WalletService.UpdateWallet(opWallet)
 	if err != nil {
 		return err
 	}
@@ -108,23 +115,37 @@ func (onepay *OnePay) DrainWallet(userID, linkedAccountID string) error {
 	/* ++++ ++++ +++ checkpoint - wallet +++ ++++ ++++ */
 	tempOPWallet := new(entity.UserWallet)
 	tempOPWallet.UserID = opWallet.UserID
-	tempOPWallet.Amount = 0 - amount
+	tempOPWallet.Amount = amount
 	logger.Must(onepay.Logger.LogWallet(tempOPWallet))
 	/* +++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++++ */
 
-	err = onepay.WalletService.UpdateWallet(opWallet)
+	err = middleman.RefillAccount(linkedAccount.AccountID, linkedAccount.AccessToken, amount)
 	if err != nil {
 
-		// Adding history for the potential reload
-		onepay.AddUserHistory(userID, linkedAccount.AccountID, entity.MethodWithdrawn, "",
-			amount, time.Now(), time.Now())
+		/* +++++++++++++++++++++++ Undo +++++++++++++++++++++++ */
+		opWallet.Amount += amount
+		innerErr := onepay.WalletService.UpdateWallet(opWallet)
+		/* ++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-		return errors.New("wallet checkpoint error")
+		if innerErr != nil {
+
+			// Adding history for the potential reload
+			onepay.AddUserHistory(userID, linkedAccount.AccountID, entity.MethodWithdrawn, "",
+				amount, time.Now(), time.Now())
+
+			return errors.New(entity.WalletCheckpointError)
+		}
+
+		/* +++++ +++++ +++++ checkpoint end +++++ +++++ +++++ */
+		logger.Must(onepay.Logger.RemoveWallet(tempOPWallet))
+		/* ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++++ */
+
+		return err
 	}
 
-	/* +++++ +++++ +++++ checkpoint end +++++ ++++ ++++ +++++ */
+	/* +++++ +++++ +++++ checkpoint end +++++ +++++ +++++ */
 	logger.Must(onepay.Logger.RemoveWallet(tempOPWallet))
-	/* ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++ ++++ +++++ */
+	/* ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ ++++ +++++ */
 
 	// Adding history for the withdrawal process
 	return onepay.AddUserHistory(userID, linkedAccount.AccountID, entity.MethodWithdrawn, "",
@@ -159,7 +180,7 @@ func (onepay *OnePay) AddUserHistory(senderID, receiverID, method, code string,
 
 	err := onepay.HistoryService.AddHistory(opHistory)
 	if err != nil {
-		return errors.New("history checkpoint error")
+		return errors.New(entity.HistoryCheckpointError)
 	}
 
 	/* +++++ +++++ +++++ checkpoint end ++++ ++++ +++++ */

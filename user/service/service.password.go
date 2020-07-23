@@ -12,8 +12,18 @@ import (
 
 // FindPassword is a method that find and return a user's password that matchs the identifier value
 func (service *Service) FindPassword(identifier string) (*entity.UserPassword, error) {
+
+	empty, _ := regexp.MatchString(`^\s*$`, identifier)
+	if empty {
+		return nil, errors.New("empty identifier used")
+	}
+
 	opPassword, err := service.passwordRepo.Find(identifier)
-	return opPassword, err
+	if err != nil {
+		return nil, errors.New("password not found")
+	}
+
+	return opPassword, nil
 }
 
 // VerifyUserPassword is a method that verify a user has provided a valid password with a matching verifypassword entry
@@ -41,10 +51,20 @@ func (service *Service) VerifyUserPassword(opPassword *entity.UserPassword, veri
 
 // UpdatePassword is a method that updates a certain's user password
 func (service *Service) UpdatePassword(opPassword *entity.UserPassword) error {
-	return service.passwordRepo.Update(opPassword)
+
+	err := service.passwordRepo.Update(opPassword)
+	if err != nil {
+		return errors.New("unable to update password")
+	}
+	return nil
 }
 
 // DeletePassword is a method that deletes a certain's user password
 func (service *Service) DeletePassword(identifier string) (*entity.UserPassword, error) {
-	return service.passwordRepo.Delete(identifier)
+
+	opPassword, err := service.passwordRepo.Delete(identifier)
+	if err != nil {
+		return nil, errors.New("unable to delete password")
+	}
+	return opPassword, nil
 }

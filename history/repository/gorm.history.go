@@ -43,7 +43,7 @@ func (repo *HistoryRepository) Find(identifier int) (*entity.UserHistory, error)
 }
 
 // Search is a method that search and returns a set of user histories from the database using an identifier.
-func (repo *HistoryRepository) Search(key, orderBy string, methods []string, pageNum int, columns ...string) []*entity.UserHistory {
+func (repo *HistoryRepository) Search(key, orderBy string, methods []string, pageNum int64, columns ...string) []*entity.UserHistory {
 
 	var opHistories []*entity.UserHistory
 	var whereStmt1 []string

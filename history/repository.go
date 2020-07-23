@@ -6,7 +6,7 @@ import "github.com/Benyam-S/onepay/entity"
 type IHistoryRepository interface {
 	Create(newOPHistory *entity.UserHistory) error
 	Find(identifier int) (*entity.UserHistory, error)
-	Search(key, orderBy string, methods []string, pageNum int, columns ...string) []*entity.UserHistory
+	Search(key, orderBy string, methods []string, pageNum int64, columns ...string) []*entity.UserHistory
 	All(identifier string) []*entity.UserHistory
 	Update(opHistory *entity.UserHistory) error
 	Delete(identifier int) (*entity.UserHistory, error)

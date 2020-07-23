@@ -1,8 +1,7 @@
 package app
 
 import (
-	"time"
-
+	"github.com/Benyam-S/onepay/entity"
 	"github.com/Benyam-S/onepay/logger"
 )
 
@@ -11,9 +10,19 @@ func (onepay *OnePay) ReloadHistory() {
 
 	loggedHistories := onepay.Logger.LoggedHistories()
 	for _, loggedHistory := range loggedHistories {
+
+		tempHistory := new(entity.UserHistory)
+		tempHistory.Amount = loggedHistory.Amount
+		tempHistory.Code = loggedHistory.Code
+		tempHistory.Method = loggedHistory.Method
+		tempHistory.SentAt = loggedHistory.SentAt
+		tempHistory.ReceivedAt = loggedHistory.ReceivedAt
+		tempHistory.SenderID = loggedHistory.SenderID
+		tempHistory.ReceiverID = loggedHistory.ReceiverID
+
 		err := onepay.HistoryService.AddHistory(loggedHistory)
-		if err != nil {
-			logger.Must(onepay.Logger.RemoveHistory(loggedHistory))
+		if err == nil {
+			logger.Must(onepay.Logger.RemoveHistory(tempHistory))
 		}
 	}
 }
@@ -23,9 +32,18 @@ func (onepay *OnePay) ReloadMoneyToken() {
 
 	loggedMoneyTokens := onepay.Logger.LoggedMoneyTokens()
 	for _, loggedMoneyToken := range loggedMoneyTokens {
+
+		tempMoneyToken := new(entity.MoneyToken)
+		tempMoneyToken.Amount = loggedMoneyToken.Amount
+		tempMoneyToken.Code = loggedMoneyToken.Code
+		tempMoneyToken.ExpirationDate = loggedMoneyToken.ExpirationDate
+		tempMoneyToken.Method = loggedMoneyToken.Method
+		tempMoneyToken.SenderID = loggedMoneyToken.SenderID
+		tempMoneyToken.SentAt = loggedMoneyToken.SentAt
+
 		err := onepay.MoneyTokenService.AddMoneyToken(loggedMoneyToken)
 		if err == nil {
-			logger.Must(onepay.Logger.RemoveMoneyToken(loggedMoneyToken))
+			logger.Must(onepay.Logger.RemoveMoneyToken(tempMoneyToken))
 		}
 	}
 }
@@ -40,43 +58,16 @@ func (onepay *OnePay) ReloadWallet() {
 			continue
 		}
 
+		// This will protect the user from multiple draining
+		if opWallet.Amount <= 0 && loggedWallet.Amount < 0 {
+			logger.Must(onepay.Logger.RemoveWallet(loggedWallet))
+			continue
+		}
+
 		opWallet.Amount += loggedWallet.Amount
 		err = onepay.WalletService.UpdateWallet(opWallet)
 		if err == nil {
-			logger.Must(onepay.Logger.RemoveWallet(opWallet))
-		}
-	}
-}
-
-// Reload is a reload method that encompass all the reload methods
-func (onepay *OnePay) Reload() {
-
-	go func() {
-		for {
-			time.Sleep(time.Hour * 2)
-			onepay.Channel <- "all"
-		}
-	}()
-
-	for {
-
-		value := <-onepay.Channel
-		switch value {
-
-		case "all":
-			onepay.ReloadMoneyToken()
-			onepay.ReloadWallet()
-			onepay.ReloadHistory()
-
-		case "reload_money_token":
-			onepay.ReloadMoneyToken()
-
-		case "reload_wallet":
-			onepay.ReloadWallet()
-			fallthrough
-
-		case "reload_history":
-			onepay.ReloadHistory()
+			logger.Must(onepay.Logger.RemoveWallet(loggedWallet))
 		}
 	}
 }

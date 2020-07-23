@@ -29,11 +29,28 @@ func (repo *SessionRepository) Create(newOPSession *session.ServerSession) error
 }
 
 // Find is a method that find user's server side sessions from the database using an identifier.
-// In Find() user_id and session_id can be used as a key
-func (repo *SessionRepository) Find(identifier string) ([]*session.ServerSession, error) {
+// In Find() session_id is only used as a key
+func (repo *SessionRepository) Find(identifier string) (*session.ServerSession, error) {
+
+	opSession := new(session.ServerSession)
+	err := repo.conn.Model(opSession).
+		Where("session_id = ?", identifier).
+		Find(opSession).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return opSession, nil
+}
+
+// Search is a method that searchs for a set of server side sessions from the database using an identifier.
+// In Search() user_id is only used as a key
+func (repo *SessionRepository) Search(identifier string) ([]*session.ServerSession, error) {
+
 	var opSessions []*session.ServerSession
 	err := repo.conn.Model(session.ServerSession{}).
-		Where("user_id = ? || session_id = ?", identifier, identifier).
+		Where("user_id = ?", identifier).
 		Find(&opSessions).Error
 
 	if err != nil {

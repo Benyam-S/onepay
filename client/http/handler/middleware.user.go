@@ -95,25 +95,25 @@ func (handler *UserHandler) Authorization(next http.HandlerFunc) http.HandlerFun
 
 		}
 
-		serverSessions, err := handler.uService.FindSession(clientSession.SessionID)
+		serverSession, err := handler.uService.FindSession(clientSession.SessionID)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 			return
 		}
 
 		// Deactivated means the user has logged out from this session
-		if serverSessions[0].Deactivated {
+		if serverSession.Deactivated {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 			return
 		}
 
 		// If you want you can notify the user
-		if serverSessions[0].DeviceInfo != r.UserAgent() {
+		if serverSession.DeviceInfo != r.UserAgent() {
 			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
 			return
 		}
 
-		opUser, err := handler.uService.FindUser(serverSessions[0].UserID)
+		opUser, err := handler.uService.FindUser(serverSession.UserID)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -122,7 +122,7 @@ func (handler *UserHandler) Authorization(next http.HandlerFunc) http.HandlerFun
 		ctx = context.WithValue(ctx, entity.Key("onepay_user"), opUser)
 		r = r.WithContext(ctx)
 
-		handler.uService.UpdateSession(serverSessions[0])
+		handler.uService.UpdateSession(serverSession)
 
 		next(w, r)
 	}

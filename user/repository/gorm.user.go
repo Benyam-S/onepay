@@ -26,14 +26,19 @@ func (repo *UserRepository) Create(newOPUser *entity.User) error {
 	newOPUser.UserID = fmt.Sprintf("OP-%d", baseID+totalNumOfUsers)
 
 	for !repo.IsUnique("user_id", newOPUser.UserID) {
-		newOPUser.UserID = fmt.Sprintf("OP-%d", baseID+totalNumOfUsers)
 		totalNumOfUsers++
+		newOPUser.UserID = fmt.Sprintf("OP-%d", baseID+totalNumOfUsers)
 	}
 
 	err := repo.conn.Create(newOPUser).Error
 	if err != nil {
 		return err
 	}
+
+	/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
+	repo.conn.Exec("UPDATE extras SET total_user_count = ?", totalNumOfUsers+1)
+	/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
 	return nil
 }
 
@@ -41,7 +46,7 @@ func (repo *UserRepository) Create(newOPUser *entity.User) error {
 // also Find() uses user_id, email, phone_number as a key for selection
 func (repo *UserRepository) Find(identifier string) (*entity.User, error) {
 
-	var modifiedIdentifier string
+	modifiedIdentifier := identifier
 	splitedIdentifier := strings.Split(identifier, "")
 	if splitedIdentifier[0] == "0" {
 		modifiedIdentifier = "+251" + strings.Join(splitedIdentifier[1:], "")
@@ -72,6 +77,7 @@ func (repo *UserRepository) Update(opUser *entity.User) error {
 	if opUser.ProfilePic == "" {
 		opUser.ProfilePic = prevOPUser.ProfilePic
 	}
+	opUser.CreatedAt = prevOPUser.CreatedAt
 	/* -------------------------------------- end --------------------------------------- */
 
 	err = repo.conn.Save(opUser).Error
@@ -114,9 +120,12 @@ func (repo *UserRepository) Delete(identifier string) (*entity.User, error) {
 
 // CountUsers is a method that counts the users in the database
 func (repo *UserRepository) CountUsers() int {
-	var totalNumOfUsers int
-	repo.conn.Model(&entity.User{}).Count(&totalNumOfUsers)
-	return totalNumOfUsers
+	type countStruct struct {
+		TotalUserCount int `gorm:"total_user_count"`
+	}
+	var count = new(countStruct)
+	repo.conn.Raw("SELECT total_user_count FROM extras").Scan(count)
+	return count.TotalUserCount
 }
 
 // IsUnique is a method that determines whether a certain column value is unique in the user table

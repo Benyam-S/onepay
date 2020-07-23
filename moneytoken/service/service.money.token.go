@@ -1,6 +1,8 @@
 package service
 
 import (
+	"errors"
+	"regexp"
 	"time"
 
 	"github.com/Benyam-S/onepay/entity"
@@ -22,39 +24,77 @@ func (service *Service) AddMoneyToken(newMoneyToken *entity.MoneyToken) error {
 
 	// Token will expire after 48 hours
 	newMoneyToken.ExpirationDate = time.Now().Add(time.Hour * 48)
-	return service.moneyTokenRepo.Create(newMoneyToken)
+	err := service.moneyTokenRepo.Create(newMoneyToken)
+	if err != nil {
+		return errors.New("unable to add new money token")
+	}
+	return nil
 }
 
 // FindMoneyToken is a method that find a set of money tokens for the provided identifier
 func (service *Service) FindMoneyToken(identifier string) (*entity.MoneyToken, error) {
-	return service.moneyTokenRepo.Find(identifier)
+
+	empty, _ := regexp.MatchString(`^\s*$`, identifier)
+	if empty {
+		return nil, errors.New("empty identifier used")
+	}
+
+	moneyToken, err := service.moneyTokenRepo.Find(identifier)
+	if err != nil {
+		return nil, errors.New("money token not found")
+	}
+	return moneyToken, nil
 }
 
 // SearchMoneyToken is a method that search and returns a set of money tokens for the provided identifier
 func (service *Service) SearchMoneyToken(identifier string) []*entity.MoneyToken {
+
+	empty, _ := regexp.MatchString(`^\s*$`, identifier)
+	if empty {
+		return []*entity.MoneyToken{}
+	}
+
 	return service.moneyTokenRepo.Search(identifier)
 }
 
 // UpdateMoneyToken is a method that updates a certain money token values
 func (service *Service) UpdateMoneyToken(moneyToken *entity.MoneyToken) error {
-	return service.moneyTokenRepo.Update(moneyToken)
+
+	err := service.moneyTokenRepo.Update(moneyToken)
+	if err != nil {
+		return errors.New("unable to update money token")
+	}
+	return nil
 }
 
 // UpdateMoneyTokenSingleValue is a method that updates a certain money token's single column value
 func (service *Service) UpdateMoneyTokenSingleValue(code, columnName string, columnValue interface{}) error {
+
 	moneyToken := new(entity.MoneyToken)
 	moneyToken.Code = code
-	return service.moneyTokenRepo.UpdateValue(moneyToken, columnName, columnValue)
+	err := service.moneyTokenRepo.UpdateValue(moneyToken, columnName, columnValue)
+	if err != nil {
+		return errors.New("unable to update money token")
+	}
+	return nil
 }
 
 // DeleteMoneyToken is a method that deletes an money token from the system
 func (service *Service) DeleteMoneyToken(code string) (*entity.MoneyToken, error) {
 
-	return service.moneyTokenRepo.Delete(code)
+	moneyToken, err := service.moneyTokenRepo.Delete(code)
+	if err != nil {
+		return nil, errors.New("unable to delete money token")
+	}
+	return moneyToken, nil
 }
 
 // DeleteMoneyTokens is a method that deletes a certain user's money tokens
 func (service *Service) DeleteMoneyTokens(senderID string) ([]*entity.MoneyToken, error) {
 
-	return service.moneyTokenRepo.DeleteMultiple(senderID)
+	moneyTokens, err := service.moneyTokenRepo.DeleteMultiple(senderID)
+	if err != nil {
+		return nil, errors.New("unable to delete money tokens")
+	}
+	return moneyTokens, nil
 }

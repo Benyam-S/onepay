@@ -1,7 +1,9 @@
 package service
 
 import (
+	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/Benyam-S/onepay/deleted"
 	"github.com/Benyam-S/onepay/entity"
@@ -31,7 +33,11 @@ func (service *Service) AddUserToTrash(opUser *entity.User) error {
 	deletedOPUser.Email = opUser.Email
 	deletedOPUser.PhoneNumber = opUser.PhoneNumber
 
-	return service.deletedUserRepo.Create(deletedOPUser)
+	err := service.deletedUserRepo.Create(deletedOPUser)
+	if err != nil {
+		return errors.New("unable to add user to trash")
+	}
+	return nil
 }
 
 // AddLinkedAccountToTrash is a method that adds a linked account to deleted table
@@ -49,11 +55,21 @@ func (service *Service) AddLinkedAccountToTrash(linkedAccount *entity.LinkedAcco
 		deletedLinkedAccount.ID = fmt.Sprintf("deleted-%s:", tools.GenerateRandomString(4)) + linkedAccount.ID
 	}
 
-	return service.deletedLinkedAccountRepo.Create(deletedLinkedAccount)
+	err := service.deletedLinkedAccountRepo.Create(deletedLinkedAccount)
+	if err != nil {
+		return errors.New("unable to add linked account to trash")
+	}
+
+	return nil
 }
 
 // SearchDeletedLinkedAccounts is a method that returns all the deleted linked accounts that match the given identifier
 func (service *Service) SearchDeletedLinkedAccounts(columnName, columnValue string) []*entity.LinkedAccount {
+
+	empty, _ := regexp.MatchString(`^\s*$`, columnValue)
+	if empty {
+		return []*entity.LinkedAccount{}
+	}
 
 	deletedLinkedAccounts := service.deletedLinkedAccountRepo.Search(columnName, columnValue)
 	linkedAccounts := make([]*entity.LinkedAccount, 0)
