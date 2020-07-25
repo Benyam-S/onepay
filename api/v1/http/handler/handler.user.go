@@ -223,7 +223,7 @@ func (handler *UserAPIHandler) HandleGetProfile(w http.ResponseWriter, r *http.R
 	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
 
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -245,7 +245,7 @@ func (handler *UserAPIHandler) HandleGetPhoto(w http.ResponseWriter, r *http.Req
 
 	opUser, err := handler.uService.FindUser(userID)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -269,7 +269,7 @@ func (handler *UserAPIHandler) HandleUpateProfile(w http.ResponseWriter, r *http
 	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
 
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -303,7 +303,7 @@ func (handler *UserAPIHandler) HandleChangePassword(w http.ResponseWriter, r *ht
 	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
 
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -315,14 +315,18 @@ func (handler *UserAPIHandler) HandleChangePassword(w http.ResponseWriter, r *ht
 
 	opPassword, err := handler.uService.FindPassword(opUser.UserID)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 
 	hasedPassword, _ := base64.StdEncoding.DecodeString(opPassword.Password)
 	err = bcrypt.CompareHashAndPassword(hasedPassword, []byte(oldPassword+opPassword.Salt))
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid old password used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 
@@ -352,7 +356,7 @@ func (handler *UserAPIHandler) HandleUploadPhoto(w http.ResponseWriter, r *http.
 	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
 
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -361,7 +365,9 @@ func (handler *UserAPIHandler) HandleUploadPhoto(w http.ResponseWriter, r *http.
 	// checking for multipart form data, the image has to be sent in multipart form data
 	fm, fh, err := r.FormFile("profile_pic")
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 	defer fm.Close()
@@ -417,7 +423,7 @@ func (handler *UserAPIHandler) HandleUploadPhoto(w http.ResponseWriter, r *http.
 	_, err = io.Copy(out, newBufferReader)
 
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
@@ -443,7 +449,7 @@ func (handler *UserAPIHandler) HandleDeleteUser(w http.ResponseWriter, r *http.R
 	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
 
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -466,10 +472,13 @@ func (handler *UserAPIHandler) HandleDeleteUser(w http.ResponseWriter, r *http.R
 
 	userHistories, linkedAccounts, err := handler.app.InitDeleteOnePayAccount(opUser.UserID)
 	if err != nil {
-		output, _ := json.Marshal(map[string]string{"error": err.Error()})
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(output)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	apiClients, err := handler.uService.SearchAPIClient(opUser.UserID, entity.APIClientTypeUnfiltered)
+	if err != nil {
+		apiClients = []*api.Client{}
 	}
 
 	opUser, err = handler.uService.DeleteUser(opUser.UserID)
@@ -490,6 +499,14 @@ func (handler *UserAPIHandler) HandleDeleteUser(w http.ResponseWriter, r *http.R
 	for _, linkedAccount := range linkedAccounts {
 		// Adding linked account to trash
 		handler.dService.AddLinkedAccountToTrash(linkedAccount)
+	}
+
+	// Unfreezing user if it has been frozen
+	handler.dService.UnfreezeUser(opUser.UserID)
+
+	// Unfreezing api clients if any
+	for _, apiClient := range apiClients {
+		handler.dService.UnfreezeClient(apiClient.APIKey)
 	}
 
 	// Getting all the deleted linked accounts
@@ -513,7 +530,7 @@ func (handler *UserAPIHandler) HandleRemovePhoto(w http.ResponseWriter, r *http.
 	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
 
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 

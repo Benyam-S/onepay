@@ -6,6 +6,9 @@ const APIClientTypeInternal = "Internal"
 // APIClientTypeExternal is a constant for external or third party client
 const APIClientTypeExternal = "Third Party"
 
+// APIClientTypeUnfiltered is a constant for unfiltered client
+const APIClientTypeUnfiltered = "Unfiltered"
+
 // APIClientAppNameInternal is a constant for the app name of an internal type api client
 const APIClientAppNameInternal = "OnePay"
 

@@ -17,7 +17,7 @@ func (handler *UserAPIHandler) HandleSendMoneyViaQRCode(w http.ResponseWriter, r
 	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
 
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -26,7 +26,9 @@ func (handler *UserAPIHandler) HandleSendMoneyViaQRCode(w http.ResponseWriter, r
 	amountString := r.FormValue("amount")
 	amount, err := strconv.ParseFloat(amountString, 64)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "amount parsing error"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 
@@ -64,7 +66,7 @@ func (handler *UserAPIHandler) HandleSendMoneyViaOnePayID(w http.ResponseWriter,
 	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
 
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -75,7 +77,9 @@ func (handler *UserAPIHandler) HandleSendMoneyViaOnePayID(w http.ResponseWriter,
 	amount, err := strconv.ParseFloat(amountString, 64)
 
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "amount parsing error"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 

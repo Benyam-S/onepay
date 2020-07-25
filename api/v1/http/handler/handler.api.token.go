@@ -28,7 +28,15 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 	// Checking if the user exists
 	opUser, err := handler.uService.FindUser(identifier)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier or password used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	// Frozen user checking
+	if handler.dService.UserIsFrozen(opUser.UserID) {
+		http.Error(w, "account has been frozen", http.StatusForbidden)
 		return
 	}
 
@@ -45,7 +53,9 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
 	opPassword, err := handler.uService.FindPassword(opUser.UserID)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier or password used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 
@@ -58,7 +68,9 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 		tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
 			fmt.Sprintf("%d", attempts+1), time.Hour*24)
 
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier or password used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 
@@ -76,6 +88,12 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 		apiClient = newAPIClient
 	} else {
 		apiClient = apiClients[0]
+	}
+
+	// Frozen api client check
+	if handler.dService.ClientIsFrozen(apiClient.APIKey) {
+		http.Error(w, "api client has been frozen", http.StatusForbidden)
+		return
 	}
 
 	newAPIToken := new(api.Token)
@@ -102,7 +120,7 @@ func (handler *UserAPIHandler) HandleLogout(w http.ResponseWriter, r *http.Reque
 	apiToken, ok := ctx.Value(entity.Key("onepay_api_token")).(*api.Token)
 
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -120,24 +138,29 @@ func (handler *UserAPIHandler) HandleRefreshAPITokenDE(w http.ResponseWriter, r 
 	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
 
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
+
+	format := mux.Vars(r)["format"]
+	password := r.FormValue("password")
 
 	// checking for false attempts
 	falseAttempts, _ := tools.GetValue(handler.redisClient, entity.PasswordFault+opUser.UserID)
 	attempts, _ := strconv.ParseInt(falseAttempts, 0, 64)
 	if attempts >= 5 {
-		http.Error(w, "too many attempts try after 24 hours", http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "too many attempts try after 24 hours"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
-
-	password := r.FormValue("password")
 
 	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
 	opPassword, err := handler.uService.FindPassword(opUser.UserID)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid password used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 
@@ -150,14 +173,16 @@ func (handler *UserAPIHandler) HandleRefreshAPITokenDE(w http.ResponseWriter, r 
 		tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
 			fmt.Sprintf("%d", attempts+1), time.Hour*24)
 
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid password used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 
 	apiToken, ok := ctx.Value(entity.Key("onepay_api_token")).(*api.Token)
 
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -206,6 +231,12 @@ func (handler *UserAPIHandler) HandleAuthentication(w http.ResponseWriter, r *ht
 		}
 	}
 
+	// Frozen api client check
+	if handler.dService.ClientIsFrozen(apiKey) {
+		http.Error(w, "api client has been frozen", http.StatusForbidden)
+		return
+	}
+
 	apiClient, err := handler.uService.FindAPIClient(apiKey)
 	if err != nil {
 		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
@@ -250,21 +281,33 @@ func (handler *UserAPIHandler) HandleInitAuthorization(w http.ResponseWriter, r 
 
 	// Checking for empty value
 	if len(nonce) == 0 {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid nonce used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 
 	// Retriving value from redis store
 	storedDataS, err := tools.GetValue(handler.redisClient, nonce)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid nonce used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 
 	// Checking if the user exists
 	opUser, err := handler.uService.FindUser(identifier)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier or password used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	// Frozen user checking
+	if handler.dService.UserIsFrozen(opUser.UserID) {
+		http.Error(w, "account has been frozen", http.StatusForbidden)
 		return
 	}
 
@@ -281,7 +324,9 @@ func (handler *UserAPIHandler) HandleInitAuthorization(w http.ResponseWriter, r 
 	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
 	opPassword, err := handler.uService.FindPassword(opUser.UserID)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier or password used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 
@@ -294,7 +339,9 @@ func (handler *UserAPIHandler) HandleInitAuthorization(w http.ResponseWriter, r 
 		tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
 			fmt.Sprintf("%d", attempts+1), time.Hour*24)
 
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier or password used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 

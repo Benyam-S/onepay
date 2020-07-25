@@ -81,6 +81,20 @@ type DeletedLinkedAccount struct {
 	AccessToken     string `gorm:"not null"`
 }
 
+// FrozenUser is a struct that defines a user that has been frozen or deactivated
+type FrozenUser struct {
+	UserID    string `gorm:"primary_key; unique; not null"`
+	Reason    string `gorm:"not null"`
+	CreatedAt time.Time
+}
+
+// FrozenClient is a struct that defines an api client that has been frozen or deactivated
+type FrozenClient struct {
+	APIKey    string `gorm:"primary_key; unique; not null"`
+	Reason    string `gorm:"not null"`
+	CreatedAt time.Time
+}
+
 // TableName is a method that defines the database table name of the user history struct
 func (UserHistory) TableName() string {
 	return "user_history"

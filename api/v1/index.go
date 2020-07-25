@@ -63,7 +63,7 @@ func apiTokenRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 
 	router.HandleFunc("/api/v1/oauth/login/app.{format:json|xml}", handler.HandleInitLoginApp)
 
-	router.HandleFunc("/api/v1/oauth/refresh", tools.MiddlewareFactory(handler.HandleRefreshAPITokenDE, handler.Authorization,
+	router.HandleFunc("/api/v1/oauth/refresh.{format:json|xml}", tools.MiddlewareFactory(handler.HandleRefreshAPITokenDE, handler.Authorization,
 		handler.AccessTokenAuthentication))
 
 	router.HandleFunc("/api/v1/oauth/logout", tools.MiddlewareFactory(handler.HandleLogout, handler.Authorization,
@@ -87,7 +87,7 @@ func transactionRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 
 	router.HandleFunc("/api/v1/oauth/pay/code.{format:json|xml}", tools.MiddlewareFactory(handler.HandlePayViaQRCode,
 		handler.Authorization, handler.APITokenDEValidation,
-		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
+		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
 
 	router.HandleFunc("/api/v1/oauth/pay/code.{format:json|xml}", tools.MiddlewareFactory(handler.HandleCreatePaymentToken,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
@@ -118,16 +118,16 @@ func walletNHistoryRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 // linkedAccountRoutes is a function that defines all the routes for accessing linked accounts of a certain user
 func linkedAccountRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 
-	router.HandleFunc("/api/v1/oauth/user/linkedaccount/init", tools.MiddlewareFactory(handler.HandleInitLinkAccount,
+	router.HandleFunc("/api/v1/oauth/user/linked/account/init.{format:json|xml}", tools.MiddlewareFactory(handler.HandleInitLinkAccount,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
 
-	router.HandleFunc("/api/v1/oauth/user/linkedaccount/finish.{format:json|xml}", tools.MiddlewareFactory(handler.HandleFinishLinkAccount,
+	router.HandleFunc("/api/v1/oauth/user/linked/account/finish", tools.MiddlewareFactory(handler.HandleFinishLinkAccount,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
 
-	router.HandleFunc("/api/v1/oauth/user/linkedaccount.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetUserLinkedAccounts,
+	router.HandleFunc("/api/v1/oauth/user/linked/account.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetUserLinkedAccounts,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
 
-	router.HandleFunc("/api/v1/oauth/user/linkedaccount.{format:json|xml}", tools.MiddlewareFactory(handler.HandleRemoveLinkedAccount,
+	router.HandleFunc("/api/v1/oauth/user/linked/account.{format:json|xml}", tools.MiddlewareFactory(handler.HandleRemoveLinkedAccount,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("DELETE")
 
 }
@@ -144,6 +144,6 @@ func moneyTokenRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 	router.HandleFunc("/api/v1/oauth/user/moneytoken/reclaim.{format:json|xml}", tools.MiddlewareFactory(handler.HandleReclaimMoneyTokens,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
 
-	router.HandleFunc("/api/v1/oauth/user/moneytoken.{format:json|xml}", tools.MiddlewareFactory(handler.HandleRemoveMoneyTokens,
-		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("DELETE")
+	router.HandleFunc("/api/v1/oauth/user/moneytoken/remove.{format:json|xml}", tools.MiddlewareFactory(handler.HandleRemoveMoneyTokens,
+		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
 }

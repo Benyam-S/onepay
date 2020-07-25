@@ -14,13 +14,19 @@ import (
 type Service struct {
 	deletedUserRepo          deleted.IDeletedUserRepository
 	deletedLinkedAccountRepo deleted.IDeletedLinkedAccountRepository
+	frozenUserRepo           deleted.IFrozenUserRepository
+	frozenClientRepo         deleted.IFrozenClientRepository
 }
 
 // NewDeletedService is a function that returns a new deleted service
 func NewDeletedService(deletedUserRepository deleted.IDeletedUserRepository,
-	deletedLinkedAccountRepository deleted.IDeletedLinkedAccountRepository) deleted.IService {
-	return &Service{deletedUserRepo: deletedUserRepository,
-		deletedLinkedAccountRepo: deletedLinkedAccountRepository}
+	deletedLinkedAccountRepository deleted.IDeletedLinkedAccountRepository,
+	frozenUserRepository deleted.IFrozenUserRepository,
+	frozenClientRepository deleted.IFrozenClientRepository) deleted.IService {
+
+	return &Service{
+		deletedUserRepo: deletedUserRepository, deletedLinkedAccountRepo: deletedLinkedAccountRepository,
+		frozenUserRepo: frozenUserRepository, frozenClientRepo: frozenClientRepository}
 }
 
 // AddUserToTrash is a method that adds a onepay user to deleted table
@@ -85,4 +91,44 @@ func (service *Service) SearchDeletedLinkedAccounts(columnName, columnValue stri
 	}
 
 	return linkedAccounts
+}
+
+// UserIsFrozen is a method that checks if a given user is frozen or not
+func (service *Service) UserIsFrozen(userID string) bool {
+
+	_, err := service.frozenUserRepo.Find(userID)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+// UnfreezeUser is a method that unfreezs a certain user account
+func (service *Service) UnfreezeUser(userID string) (*entity.FrozenUser, error) {
+
+	frozenOPUser, err := service.frozenUserRepo.Delete(userID)
+	if err != nil {
+		return nil, errors.New("unable to unfreeze account")
+	}
+	return frozenOPUser, nil
+}
+
+// ClientIsFrozen is a method that checks if a given api client is frozen or not
+func (service *Service) ClientIsFrozen(apiKey string) bool {
+
+	_, err := service.frozenClientRepo.Find(apiKey)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+// UnfreezeClient is a method that unfreezs a certain api client
+func (service *Service) UnfreezeClient(apiKey string) (*entity.FrozenClient, error) {
+
+	frozenClient, err := service.frozenClientRepo.Delete(apiKey)
+	if err != nil {
+		return nil, errors.New("unable to unfreeze api client")
+	}
+	return frozenClient, nil
 }

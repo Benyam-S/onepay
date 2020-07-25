@@ -116,9 +116,12 @@ func initServer() {
 	moneyTokenRepo := mtRepository.NewMoneyTokenRepository(mysqlDB)
 	deletedUserRepo := delRepository.NewDeletedUserRepository(mysqlDB)
 	deletedLinkedAccountRepo := delRepository.NewDeletedLinkedAccountRepository(mysqlDB)
+	frozenUserRepo := delRepository.NewFrozenUserRepository(mysqlDB)
+	frozenClientRepo := delRepository.NewFrozenClientRepository(mysqlDB)
 
 	userService := urService.NewUserService(userRepo, passwordRepo, sessionRepo, apiClientRepo, apiTokenRepo)
-	deletedService := delService.NewDeletedService(deletedUserRepo, deletedLinkedAccountRepo)
+	deletedService := delService.NewDeletedService(deletedUserRepo, deletedLinkedAccountRepo,
+		frozenUserRepo, frozenClientRepo)
 	walletService := walService.NewWalletService(walletRepo)
 	historyService := hisService.NewHistoryService(historyRepo)
 	linkedAccountService := linkService.NewLinkedAccountService(linkedAccountRepo)

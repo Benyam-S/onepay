@@ -16,27 +16,33 @@ import (
 func (handler *UserAPIHandler) AccessTokenAuthentication(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		// apiKey, accessToken, ok := r.BasicAuth()
-		// if !ok {
-		// 	http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		// 	return
-		// }
-		accessToken := r.FormValue("onepay_access_token")
+		apiKey, accessToken, ok := r.BasicAuth()
+		if !ok {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+		// accessToken := r.FormValue("onepay_access_token")
 
 		apiToken, err := handler.uService.FindAPIToken(accessToken)
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
 		// checking if the provided api client is similar with the api token's api key
-		// if apiToken.APIKey != apiKey {
-		// 	http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-		// 	return
-		// }
+		if apiToken.APIKey != apiKey {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
 
 		if handler.uService.ValidateAPIToken(apiToken) != nil {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			return
+		}
+
+		// Frozen api client checking
+		if handler.dService.ClientIsFrozen(apiToken.APIKey) {
+			http.Error(w, "api client has been frozen", http.StatusForbidden)
 			return
 		}
 
@@ -59,7 +65,7 @@ func (UserAPIHandler) APITokenDEValidation(next http.HandlerFunc) http.HandlerFu
 		apiToken, ok := ctx.Value(entity.Key("onepay_api_token")).(*api.Token)
 
 		if !ok {
-			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
@@ -86,13 +92,19 @@ func (handler *UserAPIHandler) Authorization(next http.HandlerFunc) http.Handler
 		apiToken, ok := ctx.Value(entity.Key("onepay_api_token")).(*api.Token)
 
 		if !ok {
-			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
 		opUser, err := handler.uService.FindUser(apiToken.UserID)
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		// Frozen user checking
+		if handler.dService.UserIsFrozen(opUser.UserID) {
+			http.Error(w, "account has been frozen", http.StatusForbidden)
 			return
 		}
 
@@ -116,7 +128,7 @@ func (handler *UserAPIHandler) AuthenticateScope(next http.HandlerFunc) http.Han
 		apiToken, ok := ctx.Value(entity.Key("onepay_api_token")).(*api.Token)
 
 		if !ok {
-			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 

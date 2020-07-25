@@ -18,7 +18,7 @@ func (handler *UserAPIHandler) HandleReceiveViaQRCode(w http.ResponseWriter, r *
 	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
 
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 

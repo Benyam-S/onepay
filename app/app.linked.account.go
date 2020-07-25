@@ -217,7 +217,7 @@ func (onepay *OnePay) VerifyLinkedAccount(otp, nonce string, redisClient *redis.
 
 	value, err := tools.GetValue(redisClient, nonce)
 	if err != nil {
-		return err
+		return errors.New("nonce not found")
 	}
 
 	linkedAccountInfo := make(map[string]string)

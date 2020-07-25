@@ -51,6 +51,10 @@ func (service *Service) SearchAPIClient(identifier, clientType string) ([]*api.C
 		return nil, errors.New("no api client found for the provided identifier and filter")
 	}
 
+	if clientType == entity.APIClientTypeUnfiltered {
+		return apiClientsUnFiltered, nil
+	}
+
 	apiClientsFiltered := make([]*api.Client, 0)
 	for _, client := range apiClientsUnFiltered {
 		if client.Type == clientType {

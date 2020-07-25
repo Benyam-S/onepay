@@ -20,3 +20,23 @@ type IDeletedLinkedAccountRepository interface {
 	DeleteMultiple(identifier string) ([]*entity.DeletedLinkedAccount, error)
 	IsUnique(columnName string, columnValue interface{}) bool
 }
+
+// IFrozenUserRepository is an inteface that defines all the repository methods for managing frozen users
+type IFrozenUserRepository interface {
+	Create(frozenOPUser *entity.FrozenUser) error
+	Find(identifier string) (*entity.FrozenUser, error)
+	Search(key string, pageNum int64, columns ...string) []*entity.FrozenUser
+	All(pageNum int64) []*entity.FrozenUser
+	Update(frozenOPUser *entity.FrozenUser) error
+	Delete(identifier string) (*entity.FrozenUser, error)
+}
+
+// IFrozenClientRepository is an inteface that defines all the repository methods for managing frozen api clients
+type IFrozenClientRepository interface {
+	Create(frozenAPIClient *entity.FrozenClient) error
+	Find(identifier string) (*entity.FrozenClient, error)
+	Search(key string, pageNum int64, columns ...string) []*entity.FrozenClient
+	All(pageNum int64) []*entity.FrozenClient
+	Update(frozenAPIClient *entity.FrozenClient) error
+	Delete(identifier string) (*entity.FrozenClient, error)
+}
