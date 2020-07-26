@@ -1,9 +1,6 @@
 OnePay Conn.session.sql
 playground
 config
-logger/log.history.json
-logger/log.money.token.json
-logger/log.wallet.json
-assets
 
-
+assets/profilepics/
+assets/temp/
