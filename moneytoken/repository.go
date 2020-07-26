@@ -7,6 +7,7 @@ type IMoneyTokenRepository interface {
 	Create(newMoneyToken *entity.MoneyToken) error
 	Find(identifier string) (*entity.MoneyToken, error)
 	Search(identifier string) []*entity.MoneyToken
+	Expired() []*entity.MoneyToken
 	Update(moneyToken *entity.MoneyToken) error
 	UpdateValue(moneyToken *entity.MoneyToken, columnName string, columnValue interface{}) error
 	Delete(identifier string) (*entity.MoneyToken, error)

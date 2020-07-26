@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/Benyam-S/onepay/api"
@@ -55,6 +56,18 @@ func (service *Service) SearchAPIToken(identifier string) ([]*api.Token, error) 
 	}
 
 	return apiTokens, nil
+}
+
+// SearchMultipleAPIToken is a method that searchs and returns a set of api tokens related to the key identifier
+func (service *Service) SearchMultipleAPIToken(key, pagination string, columns ...string) []*api.Token {
+
+	empty, _ := regexp.MatchString(`^\s*$`, key)
+	if empty {
+		return []*api.Token{}
+	}
+
+	pageNum, _ := strconv.ParseInt(pagination, 0, 0)
+	return service.apiTokenRepo.SearchMultiple(key, pageNum, columns...)
 }
 
 // ValidateAPIToken is a method that checks if the api token is valid and have a valid api client

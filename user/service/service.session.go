@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
+	"strconv"
 
 	"github.com/Benyam-S/onepay/client/http/session"
 	"github.com/Benyam-S/onepay/entity"
@@ -53,6 +54,44 @@ func (service *Service) SearchSession(identifier string) ([]*session.ServerSessi
 		return nil, errors.New("no session found for the provided identifier")
 	}
 	return serverSessions, nil
+}
+
+// SearchMultipleSession is a method that searchs and returns a set of server side sessions related to the key identifier
+func (service *Service) SearchMultipleSession(key, pagination string, extra ...string) []*session.ServerSession {
+
+	defaultSearchColumnsRegx := []string{}
+	defaultSearchColumnsRegx = append(defaultSearchColumnsRegx, extra...)
+	defaultSearchColumns := []string{"user_id", "session_id"}
+	pageNum, _ := strconv.ParseInt(pagination, 0, 0)
+
+	result1 := make([]*session.ServerSession, 0)
+	result2 := make([]*session.ServerSession, 0)
+	results := make([]*session.ServerSession, 0)
+	resultsMap := make(map[string]*session.ServerSession)
+
+	empty, _ := regexp.MatchString(`^\s*$`, key)
+	if empty {
+		return results
+	}
+
+	result1 = service.sessionRepo.SearchMultiple(key, pageNum, defaultSearchColumns...)
+	if len(defaultSearchColumnsRegx) > 0 {
+		result2 = service.sessionRepo.SearchMultipleWRegx(key, pageNum, defaultSearchColumnsRegx...)
+	}
+
+	for _, opSession := range result1 {
+		resultsMap[opSession.SessionID] = opSession
+	}
+
+	for _, opSession := range result2 {
+		resultsMap[opSession.SessionID] = opSession
+	}
+
+	for _, uniqueOPSession := range resultsMap {
+		results = append(results, uniqueOPSession)
+	}
+
+	return results
 }
 
 // UpdateSession is a method that updates a user's server side session

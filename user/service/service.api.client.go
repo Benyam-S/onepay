@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"regexp"
+	"strconv"
 
 	"github.com/Benyam-S/onepay/api"
 	"github.com/Benyam-S/onepay/entity"
@@ -67,6 +68,24 @@ func (service *Service) SearchAPIClient(identifier, clientType string) ([]*api.C
 	}
 
 	return apiClientsFiltered, nil
+}
+
+// SearchMultipleAPIClient is a method that searchs and returns a set of api clients related to the key identifier
+func (service *Service) SearchMultipleAPIClient(key, pagination string, columns ...string) []*api.Client {
+
+	empty, _ := regexp.MatchString(`^\s*$`, key)
+	if empty {
+		return []*api.Client{}
+	}
+
+	pageNum, _ := strconv.ParseInt(pagination, 0, 0)
+	return service.apiClientRepo.SearchMultiple(key, pageNum, columns...)
+}
+
+// AllAPIClients is a method that returns all the api clients with pagination
+func (service *Service) AllAPIClients(pagination string) []*api.Client {
+	pageNum, _ := strconv.ParseInt(pagination, 0, 0)
+	return service.apiClientRepo.All(pageNum)
 }
 
 // UpdateAPIClient is a method that updates a certain's api client

@@ -31,7 +31,7 @@ func (repo *HistoryRepository) Create(newOPHistory *entity.UserHistory) error {
 
 // Find is a method that finds a certain user history from the database using an identifier.
 // In Find() id is only used as a key
-func (repo *HistoryRepository) Find(identifier int) (*entity.UserHistory, error) {
+func (repo *HistoryRepository) Find(identifier int64) (*entity.UserHistory, error) {
 	opHistory := new(entity.UserHistory)
 	err := repo.conn.Model(opHistory).
 		Where("id = ?", identifier).First(opHistory).Error
@@ -101,7 +101,7 @@ func (repo *HistoryRepository) Update(opHistory *entity.UserHistory) error {
 
 // Delete is a method that deletes a certain user history from the database using an identifier.
 // In Delete() id is only used as a key
-func (repo *HistoryRepository) Delete(identifier int) (*entity.UserHistory, error) {
+func (repo *HistoryRepository) Delete(identifier int64) (*entity.UserHistory, error) {
 	opHistory := new(entity.UserHistory)
 	err := repo.conn.Model(opHistory).Where("id = ?", identifier).First(opHistory).Error
 

@@ -17,6 +17,19 @@ type User struct {
 	UpdatedAt   time.Time
 }
 
+// Staff is a type that defines a staff member
+type Staff struct {
+	UserID      string `gorm:"primary_key; unique; not null"`
+	FirstName   string `gorm:"not null"`
+	LastName    string `gorm:"not null"`
+	PhoneNumber string `gorm:"unique; not null"`
+	Email       string `gorm:"unique; not null"`
+	ProfilePic  string `gorm:"not null"`
+	Role        string `gorm:"not null"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 // UserPassword is a type that defines a OnePay user password
 type UserPassword struct {
 	UserID   string `gorm:"primary_key; unique; not null"`

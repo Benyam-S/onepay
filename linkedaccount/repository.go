@@ -7,6 +7,7 @@ type ILinkedAccountRepository interface {
 	Create(newLinkedAccount *entity.LinkedAccount) error
 	Find(identifier string) (*entity.LinkedAccount, error)
 	Search(colunmName string, columnValue interface{}) []*entity.LinkedAccount
+	SearchMultiple(key string, pageNum int64, columns ...string) []*entity.LinkedAccount
 	Update(linkedAccount *entity.LinkedAccount) error
 	UpdateValue(linkedAccount *entity.LinkedAccount, columnName string, columnValue interface{}) error
 	Delete(identifier string) (*entity.LinkedAccount, error)

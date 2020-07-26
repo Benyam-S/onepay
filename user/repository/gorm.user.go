@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/Benyam-S/onepay/entity"
@@ -85,6 +86,61 @@ func (repo *UserRepository) Update(opUser *entity.User) error {
 		return err
 	}
 	return nil
+}
+
+// Search is a method that search and returns a set of users from the database using an identifier.
+func (repo *UserRepository) Search(key string, pageNum int64, columns ...string) []*entity.User {
+
+	var opUsers []*entity.User
+	var whereStmt []string
+	var sqlValues []interface{}
+
+	for _, column := range columns {
+		// modifing the key so that it can match the database phone number values
+		if column == "phone_number" {
+			splitedKey := strings.Split(key, "")
+			if splitedKey[0] == "0" {
+				modifiedKey := "+251" + strings.Join(splitedKey[1:], "")
+				whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
+				sqlValues = append(sqlValues, modifiedKey)
+				continue
+			}
+		}
+		whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
+		sqlValues = append(sqlValues, key)
+	}
+
+	sqlValues = append(sqlValues, pageNum*30)
+	repo.conn.Raw("SELECT * FROM users WHERE ("+strings.Join(whereStmt, "||")+") ORDER BY first_name ASC LIMIT ?, 30", sqlValues...).Scan(&opUsers)
+
+	return opUsers
+}
+
+// SearchWRegx is a method that searchs and returns set of users limited to the key identifier and page number using regular experssions
+func (repo *UserRepository) SearchWRegx(key string, pageNum int64, columns ...string) []*entity.User {
+	var opUsers []*entity.User
+	var whereStmt []string
+	var sqlValues []interface{}
+
+	for _, column := range columns {
+		whereStmt = append(whereStmt, fmt.Sprintf(" %s regexp ? ", column))
+		sqlValues = append(sqlValues, "^"+regexp.QuoteMeta(key))
+	}
+
+	sqlValues = append(sqlValues, pageNum*30)
+	repo.conn.Raw("SELECT * FROM users WHERE "+strings.Join(whereStmt, "||")+" ORDER BY first_name ASC LIMIT ?, 30", sqlValues...).Scan(&opUsers)
+
+	return opUsers
+}
+
+// All is a method that returns all the users from the database limited with the pageNum
+func (repo *UserRepository) All(pageNum int64) []*entity.User {
+
+	var opUsers []*entity.User
+	limit := pageNum * 30
+
+	repo.conn.Raw("SELECT * FROM users ORDER BY first_name ASC LIMIT ?, 30", limit).Scan(&opUsers)
+	return opUsers
 }
 
 // UpdateValue is a method that updates a certain user's single column value in the database

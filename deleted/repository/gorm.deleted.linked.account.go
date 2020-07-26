@@ -2,6 +2,8 @@ package repository
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/Benyam-S/onepay/deleted"
 	"github.com/Benyam-S/onepay/entity"
@@ -53,6 +55,24 @@ func (repo *DeletedLinkedAccountRepository) Search(colunmName string, columnValu
 	if err != nil {
 		return []*entity.DeletedLinkedAccount{}
 	}
+	return deletedLinkedAccounts
+}
+
+// SearchMultiple is a method that search and returns a set of deleted linked accounts from the database using an identifier.
+func (repo *DeletedLinkedAccountRepository) SearchMultiple(key string, pageNum int64, columns ...string) []*entity.DeletedLinkedAccount {
+
+	var deletedLinkedAccounts []*entity.DeletedLinkedAccount
+	var whereStmt []string
+	var sqlValues []interface{}
+
+	for _, column := range columns {
+		whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
+		sqlValues = append(sqlValues, key)
+	}
+
+	sqlValues = append(sqlValues, pageNum*30)
+	repo.conn.Raw("SELECT * FROM deleted_linked_accounts WHERE ("+strings.Join(whereStmt, "||")+") ORDER BY id ASC LIMIT ?, 30", sqlValues...).Scan(&deletedLinkedAccounts)
+
 	return deletedLinkedAccounts
 }
 

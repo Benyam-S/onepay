@@ -57,6 +57,11 @@ func (service *Service) SearchMoneyToken(identifier string) []*entity.MoneyToken
 	return service.moneyTokenRepo.Search(identifier)
 }
 
+// ExpiredMoneyTokens is a method that returns all the expired money tokens
+func (service *Service) ExpiredMoneyTokens() []*entity.MoneyToken {
+	return service.moneyTokenRepo.Expired()
+}
+
 // UpdateMoneyToken is a method that updates a certain money token values
 func (service *Service) UpdateMoneyToken(moneyToken *entity.MoneyToken) error {
 

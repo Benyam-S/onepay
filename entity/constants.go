@@ -1,5 +1,11 @@
 package entity
 
+// RoleStaff is a constant that defines a staff role for a staff member table
+const RoleStaff = "Staff"
+
+// RoleAdmin is a constant that defines a admin role for a staff member table
+const RoleAdmin = "Admin"
+
 // APIClientTypeInternal is a constant for internal type api client
 const APIClientTypeInternal = "Internal"
 

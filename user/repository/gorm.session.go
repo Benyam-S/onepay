@@ -2,6 +2,9 @@ package repository
 
 import (
 	"errors"
+	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/Benyam-S/onepay/client/http/session"
 	"github.com/Benyam-S/onepay/user"
@@ -61,6 +64,42 @@ func (repo *SessionRepository) Search(identifier string) ([]*session.ServerSessi
 		return nil, errors.New("no available session for the provided identifier")
 	}
 	return opSessions, nil
+}
+
+// SearchMultiple is a method that search and returns a set of server side sessions from that matchs the key identifier.
+func (repo *SessionRepository) SearchMultiple(key string, pageNum int64, columns ...string) []*session.ServerSession {
+
+	var opSessions []*session.ServerSession
+	var whereStmt []string
+	var sqlValues []interface{}
+
+	for _, column := range columns {
+		whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
+		sqlValues = append(sqlValues, key)
+	}
+
+	sqlValues = append(sqlValues, pageNum*30)
+	repo.conn.Raw("SELECT * FROM server_sessions WHERE ("+strings.Join(whereStmt, "||")+") ORDER BY user_id ASC LIMIT ?, 30", sqlValues...).Scan(&opSessions)
+
+	return opSessions
+}
+
+// SearchMultipleWRegx is a method that searchs and returns set of server side sessions limited to the key identifier and page number using regular experssions
+func (repo *SessionRepository) SearchMultipleWRegx(key string, pageNum int64, columns ...string) []*session.ServerSession {
+
+	var opSessions []*session.ServerSession
+	var whereStmt []string
+	var sqlValues []interface{}
+
+	for _, column := range columns {
+		whereStmt = append(whereStmt, fmt.Sprintf(" %s regexp ? ", column))
+		sqlValues = append(sqlValues, "^"+regexp.QuoteMeta(key))
+	}
+
+	sqlValues = append(sqlValues, pageNum*30)
+	repo.conn.Raw("SELECT * FROM server_sessions WHERE "+strings.Join(whereStmt, "||")+" ORDER BY user_id ASC LIMIT ?, 30", sqlValues...).Scan(&opSessions)
+
+	return opSessions
 }
 
 // Update is a method that updates a certain user's server side Session value in the database

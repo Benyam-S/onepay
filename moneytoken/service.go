@@ -7,6 +7,7 @@ type IService interface {
 	AddMoneyToken(newMoneyToken *entity.MoneyToken) error
 	FindMoneyToken(identifier string) (*entity.MoneyToken, error)
 	SearchMoneyToken(identifier string) []*entity.MoneyToken
+	ExpiredMoneyTokens() []*entity.MoneyToken
 	UpdateMoneyToken(moneyToken *entity.MoneyToken) error
 	UpdateMoneyTokenSingleValue(code, columnName string, columnValue interface{}) error
 	DeleteMoneyToken(code string) (*entity.MoneyToken, error)

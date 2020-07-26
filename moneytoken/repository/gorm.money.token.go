@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"time"
 
 	"github.com/Benyam-S/onepay/entity"
 	"github.com/Benyam-S/onepay/moneytoken"
@@ -55,6 +56,19 @@ func (repo *MoneyTokenRepository) Search(identifier string) []*entity.MoneyToken
 	var moneyTokens []*entity.MoneyToken
 	err := repo.conn.Model(entity.MoneyToken{}).
 		Where("sender_id = ?", identifier).
+		Find(&moneyTokens).Error
+
+	if err != nil {
+		return []*entity.MoneyToken{}
+	}
+	return moneyTokens
+}
+
+// Expired is a method that returns all the expired moneytokens
+func (repo *MoneyTokenRepository) Expired() []*entity.MoneyToken {
+	var moneyTokens []*entity.MoneyToken
+	err := repo.conn.Model(entity.MoneyToken{}).
+		Where("expiration_date < ?", time.Now()).
 		Find(&moneyTokens).Error
 
 	if err != nil {

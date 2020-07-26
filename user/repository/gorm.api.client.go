@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Benyam-S/onepay/api"
 	"github.com/Benyam-S/onepay/tools"
@@ -68,6 +69,34 @@ func (repo *APIClientRepository) Search(identifier string) ([]*api.Client, error
 		return nil, errors.New("no available api client for the provided identifier")
 	}
 	return apiClients, nil
+}
+
+// SearchMultiple is a method that search and returns a set of api clients from that matchs the key identifier.
+func (repo *APIClientRepository) SearchMultiple(key string, pageNum int64, columns ...string) []*api.Client {
+
+	var apiClients []*api.Client
+	var whereStmt []string
+	var sqlValues []interface{}
+
+	for _, column := range columns {
+		whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
+		sqlValues = append(sqlValues, key)
+	}
+
+	sqlValues = append(sqlValues, pageNum*30)
+	repo.conn.Raw("SELECT * FROM api_clients WHERE ("+strings.Join(whereStmt, "||")+") ORDER BY api_key ASC LIMIT ?, 30", sqlValues...).Scan(&apiClients)
+
+	return apiClients
+}
+
+// All is a method that returns all the api_clients from the database limited with the pageNum
+func (repo *APIClientRepository) All(pageNum int64) []*api.Client {
+
+	var apiClients []*api.Client
+	limit := pageNum * 30
+
+	repo.conn.Raw("SELECT * FROM api_clients ORDER BY api_key ASC LIMIT ?, 30", limit).Scan(&apiClients)
+	return apiClients
 }
 
 // Update is a method that updates an api client value in the database

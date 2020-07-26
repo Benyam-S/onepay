@@ -1,6 +1,10 @@
 package repository
 
 import (
+	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/Benyam-S/onepay/deleted"
 	"github.com/Benyam-S/onepay/entity"
 	"github.com/jinzhu/gorm"
@@ -38,6 +42,61 @@ func (repo *DeletedUserRepository) Find(identifier string) (*entity.DeletedUser,
 		return nil, err
 	}
 	return deletedOPUser, nil
+}
+
+// Search is a method that search and returns a set of deleted users from the database using an identifier.
+func (repo *DeletedUserRepository) Search(key string, pageNum int64, columns ...string) []*entity.DeletedUser {
+
+	var deletedOPUsers []*entity.DeletedUser
+	var whereStmt []string
+	var sqlValues []interface{}
+
+	for _, column := range columns {
+		// modifing the key so that it can match the database phone number values
+		if column == "phone_number" {
+			splitedKey := strings.Split(key, "")
+			if splitedKey[0] == "0" {
+				modifiedKey := "+251" + strings.Join(splitedKey[1:], "")
+				whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
+				sqlValues = append(sqlValues, modifiedKey)
+				continue
+			}
+		}
+		whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
+		sqlValues = append(sqlValues, key)
+	}
+
+	sqlValues = append(sqlValues, pageNum*30)
+	repo.conn.Raw("SELECT * FROM deleted_users WHERE ("+strings.Join(whereStmt, "||")+") ORDER BY first_name ASC LIMIT ?, 30", sqlValues...).Scan(&deletedOPUsers)
+
+	return deletedOPUsers
+}
+
+// SearchWRegx is a method that searchs and returns set of deleted users limited to the key identifier and page number using regular experssions
+func (repo *DeletedUserRepository) SearchWRegx(key string, pageNum int64, columns ...string) []*entity.DeletedUser {
+	var deletedOPUsers []*entity.DeletedUser
+	var whereStmt []string
+	var sqlValues []interface{}
+
+	for _, column := range columns {
+		whereStmt = append(whereStmt, fmt.Sprintf(" %s regexp ? ", column))
+		sqlValues = append(sqlValues, "^"+regexp.QuoteMeta(key))
+	}
+
+	sqlValues = append(sqlValues, pageNum*30)
+	repo.conn.Raw("SELECT * FROM deleted_users WHERE "+strings.Join(whereStmt, "||")+" ORDER BY first_name ASC LIMIT ?, 30", sqlValues...).Scan(&deletedOPUsers)
+
+	return deletedOPUsers
+}
+
+// All is a method that returns all the deleted users from the database limited with the pageNum
+func (repo *DeletedUserRepository) All(pageNum int64) []*entity.DeletedUser {
+
+	var deletedOPUsers []*entity.DeletedUser
+	limit := pageNum * 30
+
+	repo.conn.Raw("SELECT * FROM deleted_users ORDER BY first_name ASC LIMIT ?, 30", limit).Scan(&deletedOPUsers)
+	return deletedOPUsers
 }
 
 // Update is a method that updates a certain deleted user value in the database

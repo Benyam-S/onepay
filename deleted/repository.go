@@ -6,6 +6,9 @@ import "github.com/Benyam-S/onepay/entity"
 type IDeletedUserRepository interface {
 	Create(deletedOPUser *entity.DeletedUser) error
 	Find(identifier string) (*entity.DeletedUser, error)
+	Search(key string, pageNum int64, columns ...string) []*entity.DeletedUser
+	SearchWRegx(key string, pageNum int64, columns ...string) []*entity.DeletedUser
+	All(pageNum int64) []*entity.DeletedUser
 	Update(deletedOPUser *entity.DeletedUser) error
 	Delete(identifier string) (*entity.DeletedUser, error)
 }
@@ -15,6 +18,7 @@ type IDeletedLinkedAccountRepository interface {
 	Create(deletedLinkedAccount *entity.DeletedLinkedAccount) error
 	Find(identifier string) (*entity.DeletedLinkedAccount, error)
 	Search(colunmName string, columnValue interface{}) []*entity.DeletedLinkedAccount
+	SearchMultiple(key string, pageNum int64, columns ...string) []*entity.DeletedLinkedAccount
 	Update(deletedLinkedAccount *entity.DeletedLinkedAccount) error
 	Delete(identifier string) (*entity.DeletedLinkedAccount, error)
 	DeleteMultiple(identifier string) ([]*entity.DeletedLinkedAccount, error)

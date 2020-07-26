@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Benyam-S/onepay/entity"
 	"github.com/Benyam-S/onepay/linkedaccount"
@@ -60,6 +61,24 @@ func (repo *LinkedAccountRepository) Search(colunmName string, columnValue inter
 	if err != nil {
 		return []*entity.LinkedAccount{}
 	}
+	return linkedAccounts
+}
+
+// SearchMultiple is a method that search and returns a set of linked accounts from the database using an identifier.
+func (repo *LinkedAccountRepository) SearchMultiple(key string, pageNum int64, columns ...string) []*entity.LinkedAccount {
+
+	var linkedAccounts []*entity.LinkedAccount
+	var whereStmt []string
+	var sqlValues []interface{}
+
+	for _, column := range columns {
+		whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
+		sqlValues = append(sqlValues, key)
+	}
+
+	sqlValues = append(sqlValues, pageNum*30)
+	repo.conn.Raw("SELECT * FROM linked_accounts WHERE ("+strings.Join(whereStmt, "||")+") ORDER BY id ASC LIMIT ?, 30", sqlValues...).Scan(&linkedAccounts)
+
 	return linkedAccounts
 }
 

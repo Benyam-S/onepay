@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"regexp"
+	"strconv"
 
 	"github.com/Benyam-S/onepay/entity"
 	"github.com/Benyam-S/onepay/linkedaccount"
@@ -61,6 +62,18 @@ func (service *Service) FindLinkedAccount(identifier string) (*entity.LinkedAcco
 // SearchLinkedAccounts is a method that search and returns a set of linked accounts that matchs the identifier value
 func (service *Service) SearchLinkedAccounts(columnName string, columnValue interface{}) []*entity.LinkedAccount {
 	return service.linkedAccountRepo.Search(columnName, columnValue)
+}
+
+// SearchMultipleLinkedAccounts is a method that searchs and returns a set of linked accounts related to the key identifier
+func (service *Service) SearchMultipleLinkedAccounts(key, pagination string, columns ...string) []*entity.LinkedAccount {
+
+	empty, _ := regexp.MatchString(`^\s*$`, key)
+	if empty {
+		return []*entity.LinkedAccount{}
+	}
+
+	pageNum, _ := strconv.ParseInt(pagination, 0, 0)
+	return service.linkedAccountRepo.SearchMultiple(key, pageNum, columns...)
 }
 
 // UpdateLinkedAccount is a method that updates a certain linked account values

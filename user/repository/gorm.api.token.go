@@ -2,6 +2,8 @@ package repository
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/Benyam-S/onepay/api"
 	"github.com/Benyam-S/onepay/user"
@@ -60,6 +62,24 @@ func (repo *APITokenRepository) Search(identifier string) ([]*api.Token, error) 
 		return nil, errors.New("no available api token for the provided identifier")
 	}
 	return apiTokens, nil
+}
+
+// SearchMultiple is a method that search and returns a set of api tokens from that matchs the key identifier.
+func (repo *APITokenRepository) SearchMultiple(key string, pageNum int64, columns ...string) []*api.Token {
+
+	var apiTokens []*api.Token
+	var whereStmt []string
+	var sqlValues []interface{}
+
+	for _, column := range columns {
+		whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
+		sqlValues = append(sqlValues, key)
+	}
+
+	sqlValues = append(sqlValues, pageNum*30)
+	repo.conn.Raw("SELECT * FROM api_tokens WHERE ("+strings.Join(whereStmt, "||")+") ORDER BY api_key ASC LIMIT ?, 30", sqlValues...).Scan(&apiTokens)
+
+	return apiTokens
 }
 
 // Update is a method that updates an api token value in the database

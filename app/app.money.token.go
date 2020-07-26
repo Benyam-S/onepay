@@ -102,3 +102,13 @@ func (onepay *OnePay) RemoveMoneyToken(code, userID string) error {
 
 	return nil
 }
+
+// ReclaimExpiredMoneyTokens is a method that returns all the expired money tokens to their owner's
+func (onepay *OnePay) ReclaimExpiredMoneyTokens() {
+
+	moneyTokens := onepay.MoneyTokenService.ExpiredMoneyTokens()
+
+	for _, moneyToken := range moneyTokens {
+		onepay.ReclaimMoneyToken(moneyToken.Code, moneyToken.SenderID)
+	}
+}

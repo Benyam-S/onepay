@@ -45,7 +45,7 @@ func (service *Service) AllUserHistories(userID string) []*entity.UserHistory {
 }
 
 // FindHistory is a method that finds a certain history from the system using the identifer
-func (service *Service) FindHistory(identifier int) (*entity.UserHistory, error) {
+func (service *Service) FindHistory(identifier int64) (*entity.UserHistory, error) {
 
 	history, err := service.historyRepo.Find(identifier)
 	if err != nil {

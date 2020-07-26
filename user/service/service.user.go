@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/Benyam-S/onepay/linkedaccount"
@@ -133,6 +134,50 @@ func (service *Service) FindUser(identifier string) (*entity.User, error) {
 		return nil, errors.New("no user found")
 	}
 	return opUser, nil
+}
+
+// AllUsers is a method that returns all the users with pagination
+func (service *Service) AllUsers(pagination string) []*entity.User {
+	pageNum, _ := strconv.ParseInt(pagination, 0, 0)
+	return service.userRepo.All(pageNum)
+}
+
+// SearchUsers is a method that searchs and returns a set of users related to the key identifier
+func (service *Service) SearchUsers(key, pagination string, extra ...string) []*entity.User {
+
+	defaultSearchColumnsRegx := []string{}
+	defaultSearchColumnsRegx = append(defaultSearchColumnsRegx, extra...)
+	defaultSearchColumns := []string{"user_id", "phone_number"}
+	pageNum, _ := strconv.ParseInt(pagination, 0, 0)
+
+	result1 := make([]*entity.User, 0)
+	result2 := make([]*entity.User, 0)
+	results := make([]*entity.User, 0)
+	resultsMap := make(map[string]*entity.User)
+
+	empty, _ := regexp.MatchString(`^\s*$`, key)
+	if empty {
+		return results
+	}
+
+	result1 = service.userRepo.Search(key, pageNum, defaultSearchColumns...)
+	if len(defaultSearchColumnsRegx) > 0 {
+		result2 = service.userRepo.SearchWRegx(key, pageNum, defaultSearchColumnsRegx...)
+	}
+
+	for _, opUser := range result1 {
+		resultsMap[opUser.UserID] = opUser
+	}
+
+	for _, opUser := range result2 {
+		resultsMap[opUser.UserID] = opUser
+	}
+
+	for _, uniqueOPUser := range resultsMap {
+		results = append(results, uniqueOPUser)
+	}
+
+	return results
 }
 
 // UpdateUser is a method that updates a user in the system
