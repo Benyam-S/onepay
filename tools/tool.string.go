@@ -3,6 +3,7 @@ package tools
 import (
 	"fmt"
 	"math/rand"
+	"regexp"
 	"time"
 )
 
@@ -68,4 +69,26 @@ func GenerateMoneyTokenCode() string {
 
 	return code
 
+}
+
+// IDWOutPrefix is a function that returns an id without it's prefix
+func IDWOutPrefix(id string) string {
+
+	var output string
+	prefixes := []string{`OP_API-`, `OP_Token-`, `OP_LA-`, `deleted-\w{4}:`, `OP_S-`, `OP-`}
+
+	for _, prefix := range prefixes {
+
+		match, _ := regexp.MatchString(`^`+prefix, regexp.QuoteMeta(id))
+		if match {
+
+			rx := regexp.MustCompile(prefix)
+			output = rx.ReplaceAllString(id, "")
+
+			break
+		}
+
+	}
+
+	return output
 }

@@ -24,10 +24,10 @@ func NewLinkedAccountRepository(connection *gorm.DB) linkedaccount.ILinkedAccoun
 // Create is a method that adds a new linked account to the database
 func (repo *LinkedAccountRepository) Create(newLinkedAccount *entity.LinkedAccount) error {
 
-	newLinkedAccount.ID = fmt.Sprintf("OP_LA-%s%s", newLinkedAccount.UserID[3:]+"_", tools.GenerateRandomString(5))
+	newLinkedAccount.ID = fmt.Sprintf("OP_LA-%s%s", tools.IDWOutPrefix(newLinkedAccount.UserID)+"_", tools.GenerateRandomString(5))
 
 	for !repo.IsUnique("id", newLinkedAccount.ID) {
-		newLinkedAccount.ID = fmt.Sprintf("OP_LA-%s%s", newLinkedAccount.UserID[3:]+"_", tools.GenerateRandomString(5))
+		newLinkedAccount.ID = fmt.Sprintf("OP_LA-%s%s", tools.IDWOutPrefix(newLinkedAccount.UserID)+"_", tools.GenerateRandomString(5))
 	}
 
 	err := repo.conn.Create(newLinkedAccount).Error
