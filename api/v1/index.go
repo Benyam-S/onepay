@@ -48,6 +48,21 @@ func userRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 	router.HandleFunc("/api/v1/oauth/user/password.{format:json|xml}", tools.MiddlewareFactory(handler.HandleChangePassword, handler.Authorization,
 		handler.AccessTokenAuthentication)).Methods("PUT")
 
+	/* ++++++++++++++++++++++++++++++++++++++++++ SESSION MANAGEMENT ++++++++++++++++++++++++++++++++++++++++++ */
+
+	router.HandleFunc("/api/v1/oauth/user/session.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetActiveSessions, handler.Authorization,
+		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
+
+	router.HandleFunc("/api/v1/oauth/user/session", tools.MiddlewareFactory(handler.HandleDeactivateSession, handler.Authorization,
+		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
+
+	/* ++++++++++++++++++++++++++++++++++++++++++++ FORGOT PASSWORD +++++++++++++++++++++++++++++++++++++++++++ */
+
+	router.HandleFunc("/user/password/rest/init.{format:json|xml}", tools.MiddlewareFactory(handler.HandleInitForgotPassword)).
+		Methods("POST")
+
+	router.HandleFunc("/user/password/rest/finish/{nonce}", tools.MiddlewareFactory(handler.HandleFinishForgotPassword)).
+		Methods("POST")
 }
 
 // tokenRoutes is a function that defines all the routes for handling api tokens
@@ -118,16 +133,16 @@ func walletNHistoryRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 // linkedAccountRoutes is a function that defines all the routes for accessing linked accounts of a certain user
 func linkedAccountRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 
-	router.HandleFunc("/api/v1/oauth/user/linked/account/init.{format:json|xml}", tools.MiddlewareFactory(handler.HandleInitLinkAccount,
+	router.HandleFunc("/api/v1/oauth/user/linkedaccount/init.{format:json|xml}", tools.MiddlewareFactory(handler.HandleInitLinkAccount,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
 
-	router.HandleFunc("/api/v1/oauth/user/linked/account/finish", tools.MiddlewareFactory(handler.HandleFinishLinkAccount,
+	router.HandleFunc("/api/v1/oauth/user/linkedaccount/finish", tools.MiddlewareFactory(handler.HandleFinishLinkAccount,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
 
-	router.HandleFunc("/api/v1/oauth/user/linked/account.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetUserLinkedAccounts,
+	router.HandleFunc("/api/v1/oauth/user/linkedaccount.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetUserLinkedAccounts,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
 
-	router.HandleFunc("/api/v1/oauth/user/linked/account.{format:json|xml}", tools.MiddlewareFactory(handler.HandleRemoveLinkedAccount,
+	router.HandleFunc("/api/v1/oauth/user/linkedaccount.{format:json|xml}", tools.MiddlewareFactory(handler.HandleRemoveLinkedAccount,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("DELETE")
 
 }

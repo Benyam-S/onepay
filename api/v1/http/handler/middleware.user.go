@@ -21,7 +21,6 @@ func (handler *UserAPIHandler) AccessTokenAuthentication(next http.HandlerFunc) 
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
-		// accessToken := r.FormValue("onepay_access_token")
 
 		apiToken, err := handler.uService.FindAPIToken(accessToken)
 		if err != nil {

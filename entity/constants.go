@@ -49,7 +49,7 @@ const MoneyTokenCheckpointError = "money token checkpoint error"
 const HistoryCheckpointError = "history checkpoint error"
 
 // ScopeAll is a constant that holds all usable scope values
-const ScopeAll = "profile, send, receive, pay, wallet, history, linkedaccount, moneytoken"
+const ScopeAll = "profile, session, send, receive, pay, wallet, history, linkedaccount, moneytoken"
 
 // PasswordFault is a constant that holds the value password_fault-
 const PasswordFault = "password_fault-"

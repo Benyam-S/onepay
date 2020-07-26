@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"net/smtp"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -16,6 +17,15 @@ type APIClientSMS struct {
 	AccountID string `json:"accountID"`
 	AuthToken string `json:"authToken"`
 	From      string `json:"from"`
+}
+
+// SMTPContainer is a type that defines all the entites for sending email using smtp
+type SMTPContainer struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	DNS      string `json:"dns"`
+	Port     string `json:"port"`
+	Extra    string `json:"extra"`
 }
 
 // SendSMS is a function that sends a given message to the provide phone number
@@ -67,4 +77,27 @@ func SendSMS(to, msg string) (string, error) {
 	}
 
 	return "", errors.New(resp.Status)
+}
+
+// SendEmail is a function that sends an email to the provided email address.
+func SendEmail(to, subject, msg string) error {
+
+	dir := filepath.Join(os.Getenv("config_files_dir"), "/accounts/account.api.email.json")
+	data, err := ioutil.ReadFile(dir)
+	if err != nil {
+		return err
+	}
+
+	var smtpContainer SMTPContainer
+	err = json.Unmarshal(data, &smtpContainer)
+	if err != nil {
+		return err
+	}
+
+	auth := smtp.PlainAuth(smtpContainer.Extra, smtpContainer.Email, smtpContainer.Password, smtpContainer.DNS)
+	msgByte := []byte(
+		"To:" + to + "\r\n" + "Subject: " + subject + "\r\n" + "\r\n" + msg)
+	receiver := []string{to}
+
+	return smtp.SendMail(smtpContainer.DNS+":"+smtpContainer.Port, auth, smtpContainer.Email, receiver, msgByte)
 }

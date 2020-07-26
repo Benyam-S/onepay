@@ -87,7 +87,12 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 		}
 		apiClient = newAPIClient
 	} else {
-		apiClient = apiClients[0]
+		for _, client := range apiClients {
+			if client.APPName == entity.APIClientAppNameInternal {
+				apiClient = client
+				break
+			}
+		}
 	}
 
 	// Frozen api client check

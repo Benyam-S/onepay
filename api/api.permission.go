@@ -16,6 +16,9 @@ func RequestScope(r *http.Request) (string, error) {
 	case strings.Contains(uri, "/profile"):
 		return "profile", nil
 
+	case strings.Contains(uri, "/session"):
+		return "session", nil
+
 	case strings.Contains(uri, "/send"):
 		return "send", nil
 
@@ -27,6 +30,9 @@ func RequestScope(r *http.Request) (string, error) {
 
 	case strings.Contains(uri, "/wallet"):
 		return "wallet", nil
+
+	case strings.Contains(uri, "/linkedaccount"):
+		return "linkedaccount", nil
 
 	case strings.Contains(uri, "/history"):
 		return "history", nil
@@ -42,7 +48,7 @@ func RequestScope(r *http.Request) (string, error) {
 // ValidScope is a function that checks whether the provided scope is valid or not
 func ValidScope(scope string) bool {
 
-	validScopes := []string{"profile", "send", "receive", "pay",
+	validScopes := []string{"profile", "session", "send", "receive", "pay",
 		"wallet", "history", "linkedaccount", "moneytoken"}
 	for _, validScope := range validScopes {
 		if validScope == scope {

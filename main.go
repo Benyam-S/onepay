@@ -29,7 +29,6 @@ import (
 	"github.com/Benyam-S/onepay/logger"
 	mtRepository "github.com/Benyam-S/onepay/moneytoken/repository"
 	mtService "github.com/Benyam-S/onepay/moneytoken/service"
-	"github.com/Benyam-S/onepay/tools"
 	urRepository "github.com/Benyam-S/onepay/user/repository"
 	urService "github.com/Benyam-S/onepay/user/service"
 	walRepository "github.com/Benyam-S/onepay/wallet/repository"
@@ -55,10 +54,13 @@ var (
 
 // SystemConfig is a type that defines a server system configuration file
 type SystemConfig struct {
-	RedisClient map[string]string `json:"redis_client"`
-	MysqlClient map[string]string `json:"mysql_client"`
-	CookieName  string            `json:"cookie_name"`
-	SecretKey   string            `json:"secret_key"`
+	RedisClient     map[string]string `json:"redis_client"`
+	MysqlClient     map[string]string `json:"mysql_client"`
+	CookieName      string            `json:"cookie_name"`
+	SecretKey       string            `json:"secret_key"`
+	SuperAdminEmail string            `json:"super_admin_email"`
+	DomainName      string            `json:"domain_name"`
+	ServerPort      string            `json:"server_port"`
 }
 
 // initServer initialize the web server for takeoff
@@ -96,6 +98,8 @@ func initServer() {
 	os.Setenv("config_files_dir", configFilesDir)
 	os.Setenv("onepay_secret_key", sysConfig.SecretKey)
 	os.Setenv("onepay_cookie_name", sysConfig.CookieName)
+	os.Setenv("domain_name", sysConfig.DomainName)
+	os.Setenv("server_port", sysConfig.ServerPort)
 
 	os.Setenv(entity.TransactionFee, fmt.Sprintf("%f", transactionFee))
 	os.Setenv(entity.TransactionBaseLimit, fmt.Sprintf("%f", transactionBaseLimit))
@@ -193,13 +197,6 @@ func main() {
 
 	router := mux.NewRouter()
 
-	router.HandleFunc("/add", userHandler.HandleInitAddUser)
-	router.HandleFunc("/verify", userHandler.HandleVerifyOTP)
-	router.HandleFunc("/finish", userHandler.HandleFinishAddUser)
-	router.HandleFunc("/login", userHandler.HandleLogin)
-	router.HandleFunc("/dashboard", tools.MiddlewareFactory(userHandler.HandleDashboard, userHandler.Authorization, userHandler.SessionDEValidation, userHandler.SessionAuthentication))
-	router.HandleFunc("/logout", tools.MiddlewareFactory(userHandler.HandleLogout, userHandler.Authorization, userHandler.SessionAuthentication))
-
 	v1.Start(userAPIHandler, router)
 
 	go func() {
@@ -234,5 +231,5 @@ func main() {
 		}
 	}()
 
-	http.ListenAndServe(":8080", router)
+	http.ListenAndServe(":"+os.Getenv("server_port"), router)
 }

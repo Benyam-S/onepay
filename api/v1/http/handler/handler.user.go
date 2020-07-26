@@ -15,6 +15,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/Benyam-S/onepay/client/http/session"
 	"github.com/Benyam-S/onepay/deleted"
 
 	"github.com/Benyam-S/onepay/api"
@@ -72,7 +73,7 @@ func (handler *UserAPIHandler) HandleInitAddUser(w http.ResponseWriter, r *http.
 
 	// Reading message body from our asset folder
 	wd, _ := os.Getwd()
-	dir := filepath.Join(wd, "./assets/messages", "/message.sms.json")
+	dir := filepath.Join(wd, "./assets/messages", "/message.sms.otp.json")
 	data, err1 := ioutil.ReadFile(dir)
 
 	var messageSMS map[string][]string
@@ -544,6 +545,258 @@ func (handler *UserAPIHandler) HandleRemovePhoto(w http.ResponseWriter, r *http.
 		wd, _ := os.Getwd()
 		filePath := filepath.Join(wd, "./assets/profilepics", opUser.ProfilePic)
 		tools.RemoveFile(filePath)
+	}
+
+}
+
+/* ++++++++++++++++++++++++++++++++++++++++++ SESSION MANAGEMENT ++++++++++++++++++++++++++++++++++++++++++ */
+
+// HandleGetActiveSessions is a handler func that handles the request for viewing all the user's active sessions
+func (handler *UserAPIHandler) HandleGetActiveSessions(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
+
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	format := mux.Vars(r)["format"]
+
+	type SessionContainer struct {
+		ID         string
+		CreatedAt  int64
+		UdatedAt   int64
+		DeviceInfo string
+		IPAddress  string
+	}
+
+	sessionContainers := make([]*SessionContainer, 0)
+
+	sessions, err := handler.uService.SearchSession(opUser.UserID)
+	if err != nil {
+		sessions = []*session.ServerSession{}
+	}
+
+	for _, session := range sessions {
+		if !session.Deactivated {
+			sessionContainer := new(SessionContainer)
+			sessionContainer.CreatedAt = session.CreatedAt.Unix()
+			sessionContainer.UdatedAt = session.UpdatedAt.Unix()
+			sessionContainer.DeviceInfo = session.DeviceInfo
+			sessionContainer.IPAddress = session.IPAddress
+			sessionContainer.ID = session.SessionID
+
+			sessionContainers = append(sessionContainers, sessionContainer)
+		}
+	}
+
+	apiClients, err := handler.uService.SearchAPIClient(opUser.UserID, entity.APIClientTypeInternal)
+	for _, apiClient := range apiClients {
+
+		apiTokens, err := handler.uService.SearchAPIToken(apiClient.APIKey)
+		if err != nil {
+			apiTokens = []*api.Token{}
+		}
+		for _, apiToken := range apiTokens {
+			if !apiToken.Deactivated {
+				sessionContainer := new(SessionContainer)
+				sessionContainer.CreatedAt = apiToken.CreatedAt.Unix()
+				sessionContainer.UdatedAt = apiToken.UpdatedAt.Unix()
+				sessionContainer.DeviceInfo = apiClient.APPName
+				sessionContainer.ID = apiToken.AccessToken
+
+				sessionContainers = append(sessionContainers, sessionContainer)
+			}
+		}
+	}
+
+	output, _ := tools.MarshalIndent(sessionContainers, "", "\t", format)
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+	return
+
+}
+
+// HandleDeactivateSession is a handler func that handles the request for deactivating user's active session
+func (handler *UserAPIHandler) HandleDeactivateSession(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
+
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	id := r.FormValue("id")
+
+	session, err1 := handler.uService.FindSession(id)
+	apiToken, err2 := handler.uService.FindAPIToken(id)
+	if err1 != nil && err2 != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Incase of client check for current session deactivation
+	if session != nil {
+		session.Deactivated = true
+		handler.uService.UpdateSession(session)
+
+	} else if apiToken != nil {
+		if apiToken.UserID != opUser.UserID {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		if apiToken.AccessToken == id {
+			http.Error(w, "can not deactivate current session", http.StatusBadRequest)
+			return
+		}
+
+		apiToken.Deactivated = true
+		handler.uService.UpdateAPIToken(apiToken)
+	}
+
+}
+
+/* ++++++++++++++++++++++++++++++++++++++++++++ FORGOT PASSWORD +++++++++++++++++++++++++++++++++++++++++++ */
+
+// HandleInitForgotPassword is a handler func that initiate the forgot password process
+func (handler *UserAPIHandler) HandleInitForgotPassword(w http.ResponseWriter, r *http.Request) {
+
+	format := mux.Vars(r)["format"]
+	method := r.FormValue("method")
+	identifier := r.FormValue("identifier")
+
+	opUser, err := handler.uService.FindUser(identifier)
+	if err != nil {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	if method == "email" {
+
+		nonce := uuid.Must(uuid.NewRandom())
+
+		// Reading message body from our asset folder
+		wd, _ := os.Getwd()
+		dir := filepath.Join(wd, "./assets/messages", "/message.email.rest.json")
+		data, err1 := ioutil.ReadFile(dir)
+
+		var messageEmail map[string][]string
+		err2 := json.Unmarshal(data, &messageEmail)
+
+		if err1 != nil || err2 != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		restPath := os.Getenv("domain_name") + ":" + os.Getenv("server_port") + "/user/password/rest/finish/" + nonce.String()
+		msg := messageEmail["message_body"][0] + restPath + ". " + messageEmail["message_body"][1]
+		err := tools.SendEmail(opUser.Email, "Rest OnePay User Password", msg)
+
+		if err != nil {
+			output, _ := tools.MarshalIndent(ErrorBody{Error: "unable to send message"}, "", "\t", format)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(output)
+			return
+		}
+
+		err = tools.SetValue(handler.redisClient, nonce.String(), opUser.UserID, time.Hour*6)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+	} else if method == "phone_number" {
+
+		nonce := uuid.Must(uuid.NewRandom())
+
+		// Reading message body from our asset folder
+		wd, _ := os.Getwd()
+		dir := filepath.Join(wd, "./assets/messages", "/message.sms.rest.json")
+		data, err1 := ioutil.ReadFile(dir)
+
+		var messageSMS map[string][]string
+		err2 := json.Unmarshal(data, &messageSMS)
+
+		if err1 != nil || err2 != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		restPath := os.Getenv("domain_name") + ":" + os.Getenv("server_port") + "/user/password/rest/finish/" + nonce.String()
+		msg := messageSMS["message_body"][0] + restPath + ". " + messageSMS["message_body"][1]
+		_, err := tools.SendSMS(opUser.PhoneNumber, msg)
+
+		if err != nil {
+			output, _ := tools.MarshalIndent(ErrorBody{Error: "unable to send message"}, "", "\t", format)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(output)
+			return
+		}
+
+		err = tools.SetValue(handler.redisClient, nonce.String(), opUser.UserID, time.Hour*6)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+	} else {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "unknown method used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+}
+
+// HandleFinishForgotPassword is a handler func that finish the forgot password process
+func (handler *UserAPIHandler) HandleFinishForgotPassword(w http.ResponseWriter, r *http.Request) {
+
+	newOPPassword := new(entity.UserPassword)
+
+	nonce := mux.Vars(r)["nonce"]
+	newOPPassword.Password = r.FormValue("password")
+	vPassword := r.FormValue("vPassword")
+
+	err := handler.uService.VerifyUserPassword(newOPPassword, vPassword)
+	if err != nil {
+		output, _ := json.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	storedOPUserID, err := tools.GetValue(handler.redisClient, nonce)
+	if err != nil {
+		output, _ := json.MarshalIndent(ErrorBody{Error: "invalid token used"}, "", "\t")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	// Removing key value pair from the redis store
+	tools.RemoveValues(handler.redisClient, nonce)
+
+	opUser, err := handler.uService.FindUser(storedOPUserID)
+	if err != nil {
+		output, _ := json.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	newOPPassword.UserID = opUser.UserID
+	err = handler.uService.UpdatePassword(newOPPassword)
+	if err != nil {
+		output, _ := json.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(output)
+		return
 	}
 
 }
