@@ -84,13 +84,13 @@ func (handler *UserAPIHandler) HandleInitAddUser(w http.ResponseWriter, r *http.
 		return
 	}
 
-	msg := messageSMS["message_body"][0] + otp + ". " + messageSMS["message_body"][1]
-	smsMessageID, err := tools.SendSMS(newOPUser.PhoneNumber, msg)
+	// msg := messageSMS["message_body"][0] + otp + ". " + messageSMS["message_body"][1]
+	// smsMessageID, err := tools.SendSMS(newOPUser.PhoneNumber, msg)
 
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
+	// if err != nil {
+	// 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	// 	return
+	// }
 
 	// Saving all the data to a temporary database
 	tempOutput, err1 := json.Marshal(newOPUser)
@@ -102,7 +102,7 @@ func (handler *UserAPIHandler) HandleInitAddUser(w http.ResponseWriter, r *http.
 	}
 
 	// Sending nonce to the client with the message ID, so it can be used to retrive the otp token
-	output, _ := json.Marshal(map[string]string{"nonce": smsNonce.String(), "messageID": smsMessageID})
+	output, _ := json.Marshal(map[string]string{"nonce": smsNonce.String(), "messageID": otp})
 	w.WriteHeader(http.StatusOK)
 	w.Write(output)
 }
@@ -132,7 +132,7 @@ func (handler *UserAPIHandler) HandleVerifyOTP(w http.ResponseWriter, r *http.Re
 	}
 
 	// Removing key value pair from the redis store
-	tools.RemoveValues(handler.redisClient, otp)
+	tools.RemoveValues(handler.redisClient, nonce)
 
 	// The nonce below is a key where the new user data is stored
 	output, _ := json.Marshal(map[string]string{"nonce": otp + nonce})

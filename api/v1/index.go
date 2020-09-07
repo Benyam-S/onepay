@@ -58,10 +58,10 @@ func userRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 
 	/* ++++++++++++++++++++++++++++++++++++++++++++ FORGOT PASSWORD +++++++++++++++++++++++++++++++++++++++++++ */
 
-	router.HandleFunc("/user/password/rest/init.{format:json|xml}", tools.MiddlewareFactory(handler.HandleInitForgotPassword)).
+	router.HandleFunc("/api/v1/user/password/rest/init.{format:json|xml}", tools.MiddlewareFactory(handler.HandleInitForgotPassword)).
 		Methods("POST")
 
-	router.HandleFunc("/user/password/rest/finish/{nonce}", tools.MiddlewareFactory(handler.HandleFinishForgotPassword)).
+	router.HandleFunc("/api/v1/user/password/rest/finish/{nonce}", tools.MiddlewareFactory(handler.HandleFinishForgotPassword)).
 		Methods("POST")
 }
 

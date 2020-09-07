@@ -63,7 +63,7 @@ func (service *Service) ValidateUserProfile(opUser *entity.User) entity.ErrMap {
 	matchFirstName, _ := regexp.MatchString(`^[a-zA-Z]\w*$`, opUser.FirstName)
 	matchLastName, _ := regexp.MatchString(`^\w*$`, opUser.LastName)
 	matchEmail, _ := regexp.MatchString(`^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$`, opUser.Email)
-	matchPhoneNumber, _ := regexp.MatchString(`^(\+\d{11,12})|(0\d{9})$`, opUser.PhoneNumber)
+	matchPhoneNumber, _ := regexp.MatchString(`^(\+\d{11,12})$|(0\d{9})$`, opUser.PhoneNumber)
 
 	if !matchFirstName {
 		errMap["first_name"] = errors.New("firstname should only contain alpha numerical values and have at least one character")
@@ -76,7 +76,7 @@ func (service *Service) ValidateUserProfile(opUser *entity.User) entity.ErrMap {
 	}
 
 	if !matchPhoneNumber {
-		errMap["phone_number"] = errors.New("phonenumber should be +XXXXXXXXXXXX or 0XXXXXXXXX formate, also use url escaping if country code was used")
+		errMap["phone_number"] = errors.New("phonenumber should be +XXXXXXXXXXXX or 0XXXXXXXXX formate")
 	} else {
 		// If a valid phone number is provided, adjust the phone number to fit the database
 		phoneNumberSlice := strings.Split(opUser.PhoneNumber, "")
