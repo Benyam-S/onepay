@@ -228,8 +228,47 @@ func (handler *UserAPIHandler) HandleGetProfile(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// the format can a json or xml
+	// the format can be a json or xml
 	format := mux.Vars(r)["format"]
+
+	output, _ := tools.MarshalIndent(opUser, "", "\t", format)
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+	return
+
+}
+
+// HandleGetUser is a handler func that handles a request for getting or viewing user's profile
+// This method can be a little controversial because it allow users to view other's profile,
+// Solved the problem by deducting unnecessary values
+func (handler *UserAPIHandler) HandleGetUser(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
+
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	// the format can be a json or xml
+	format := mux.Vars(r)["format"]
+	userID := mux.Vars(r)["user_id"]
+	opUser, err := handler.uService.FindUser(userID)
+
+	if err != nil {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "user not found"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	// Deducting unnecessary entries
+	opUser.CreatedAt = time.Now()
+	opUser.UpdatedAt = time.Now()
+	opUser.PhoneNumber = ""
+	opUser.Email = ""
+	opUser.ProfilePic = ""
 
 	output, _ := tools.MarshalIndent(opUser, "", "\t", format)
 	w.WriteHeader(http.StatusOK)

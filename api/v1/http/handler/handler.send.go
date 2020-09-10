@@ -46,10 +46,24 @@ func (handler *UserAPIHandler) HandleSendMoneyViaQRCode(w http.ResponseWriter, r
 	}
 
 	if err != nil {
+
+		// Whitelisting errors
+		if err.Error() == entity.TransactionBaseLimitError ||
+			err.Error() == entity.DailyTransactionLimitError ||
+			err.Error() == entity.InsufficientBalanceError {
+
+			output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(output)
+			return
+		}
+
+		// Any errors other than the above should be an internal server error
 		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(output)
 		return
+
 	}
 
 	output, _ := tools.MarshalIndent(CodeBody{Code: moneyToken.Code}, "", "\t", format)
@@ -97,10 +111,27 @@ func (handler *UserAPIHandler) HandleSendMoneyViaOnePayID(w http.ResponseWriter,
 	}
 
 	if err != nil && err.Error() != entity.HistoryCheckpointError {
+
+		// Whitelisting errors
+		if err.Error() == entity.TransactionBaseLimitError ||
+			err.Error() == entity.DailyTransactionLimitError ||
+			err.Error() == entity.InsufficientBalanceError ||
+			err.Error() == entity.SenderNotFoundError ||
+			err.Error() == entity.ReceiverNotFoundError ||
+			err.Error() == entity.TransactionWSelfError {
+
+			output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(output)
+			return
+		}
+
+		// Any errors other than the above should be an internal server error
 		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(output)
 		return
+
 	}
 
 }

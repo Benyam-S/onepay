@@ -31,6 +31,9 @@ func userRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 	router.HandleFunc("/api/v1/oauth/user", tools.MiddlewareFactory(handler.HandleDeleteUser, handler.Authorization,
 		handler.AccessTokenAuthentication)).Methods("DELETE")
 
+	router.HandleFunc("/api/v1/oauth/user/{user_id}/profile.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetUser, handler.Authorization,
+		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
+
 	router.HandleFunc("/api/v1/oauth/user/profile.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetProfile, handler.Authorization,
 		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
 

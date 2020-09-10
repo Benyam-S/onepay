@@ -16,11 +16,11 @@ import (
 func (onepay *OnePay) SendViaQRCode(userID string, amount float64, redisClient *redis.Client) (*entity.MoneyToken, error) {
 
 	if !AboveTransactionBaseLimit(amount) {
-		return nil, errors.New("the provided amount is less than the transaction base limit")
+		return nil, errors.New(entity.TransactionBaseLimitError)
 	}
 
 	if AboveDailyTransactionLimit(userID, amount, redisClient) {
-		return nil, errors.New("user has exceeded daily transaction limit")
+		return nil, errors.New(entity.DailyTransactionLimitError)
 	}
 
 	opWallet, err := onepay.WalletService.FindWallet(userID)
@@ -30,7 +30,7 @@ func (onepay *OnePay) SendViaQRCode(userID string, amount float64, redisClient *
 
 	transactionFee := GetTransactionFee(amount)
 	if opWallet.Amount < amount+transactionFee {
-		return nil, errors.New("insufficient balance, please recharge your wallet")
+		return nil, errors.New(entity.InsufficientBalanceError)
 	}
 
 	opWallet.Amount = opWallet.Amount - (amount + transactionFee)
@@ -88,30 +88,30 @@ func (onepay *OnePay) SendViaOnePayID(senderID, receiverID string,
 	amount float64, redisClient *redis.Client) error {
 
 	if !AboveTransactionBaseLimit(amount) {
-		return errors.New("the provided amount is less than the transaction base limit")
+		return errors.New(entity.TransactionBaseLimitError)
 	}
 
 	if AboveDailyTransactionLimit(senderID, amount, redisClient) {
-		return errors.New("user has exceeded daily transaction limit")
+		return errors.New(entity.DailyTransactionLimitError)
 	}
 
 	if senderID == receiverID {
-		return errors.New("cannot make transaction with your own account")
+		return errors.New(entity.TransactionWSelfError)
 	}
 
 	senderOPWallet, err := onepay.WalletService.FindWallet(senderID)
 	if err != nil {
-		return errors.New("no onepay user for the provided sender id")
+		return errors.New(entity.SenderNotFoundError)
 	}
 
 	receiverOPWallet, err := onepay.WalletService.FindWallet(receiverID)
 	if err != nil {
-		return errors.New("no onepay user for the provided receiver id")
+		return errors.New(entity.ReceiverNotFoundError)
 	}
 
 	transactionFee, _ := strconv.ParseFloat(os.Getenv(entity.TransactionFee), 64)
 	if senderOPWallet.Amount < amount+transactionFee {
-		return errors.New("insufficient balance, please recharge your wallet")
+		return errors.New(entity.InsufficientBalanceError)
 	}
 
 	senderOPWallet.Amount = senderOPWallet.Amount - (amount + transactionFee)
