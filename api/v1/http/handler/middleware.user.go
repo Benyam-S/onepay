@@ -41,7 +41,7 @@ func (handler *UserAPIHandler) AccessTokenAuthentication(next http.HandlerFunc) 
 
 		// Frozen api client checking
 		if handler.dService.ClientIsFrozen(apiToken.APIKey) {
-			http.Error(w, "api client has been frozen", http.StatusForbidden)
+			http.Error(w, entity.FrozenAPIClientError, http.StatusForbidden)
 			return
 		}
 
@@ -103,7 +103,7 @@ func (handler *UserAPIHandler) Authorization(next http.HandlerFunc) http.Handler
 
 		// Frozen user checking
 		if handler.dService.UserIsFrozen(opUser.UserID) {
-			http.Error(w, "account has been frozen", http.StatusForbidden)
+			http.Error(w, entity.FrozenAccountError, http.StatusForbidden)
 			return
 		}
 

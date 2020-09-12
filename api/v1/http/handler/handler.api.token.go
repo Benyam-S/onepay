@@ -28,7 +28,7 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 	// Checking if the user exists
 	opUser, err := handler.uService.FindUser(identifier)
 	if err != nil {
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier or password used"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.InvalidPasswordOrIdentifierError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -36,7 +36,7 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 
 	// Frozen user checking
 	if handler.dService.UserIsFrozen(opUser.UserID) {
-		http.Error(w, "account has been frozen", http.StatusForbidden)
+		http.Error(w, entity.FrozenAccountError, http.StatusForbidden)
 		return
 	}
 
@@ -44,7 +44,7 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 	falseAttempts, _ := tools.GetValue(handler.redisClient, entity.PasswordFault+opUser.UserID)
 	attempts, _ := strconv.ParseInt(falseAttempts, 0, 64)
 	if attempts >= 5 {
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "too many attempts try after 24 hours"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.TooManyAttemptsError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -53,7 +53,7 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
 	opPassword, err := handler.uService.FindPassword(opUser.UserID)
 	if err != nil {
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier or password used"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.InvalidPasswordOrIdentifierError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -68,7 +68,7 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 		tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
 			fmt.Sprintf("%d", attempts+1), time.Hour*24)
 
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier or password used"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.InvalidPasswordOrIdentifierError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -82,7 +82,7 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 		newAPIClient.Type = entity.APIClientTypeInternal
 		err = handler.uService.AddAPIClient(newAPIClient, opUser)
 		if err != nil {
-			http.Error(w, "unable to add an internal api client", http.StatusInternalServerError)
+			http.Error(w, entity.InternalAPIClientError, http.StatusInternalServerError)
 			return
 		}
 		apiClient = newAPIClient
@@ -97,7 +97,7 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 
 	// Frozen api client check
 	if handler.dService.ClientIsFrozen(apiClient.APIKey) {
-		http.Error(w, "api client has been frozen", http.StatusForbidden)
+		http.Error(w, entity.FrozenAPIClientError, http.StatusForbidden)
 		return
 	}
 
@@ -105,7 +105,7 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 	newAPIToken.Scopes = entity.ScopeAll
 	err = handler.uService.AddAPIToken(newAPIToken, apiClient, opUser)
 	if err != nil {
-		http.Error(w, "unable to create an api token", http.StatusInternalServerError)
+		http.Error(w, entity.APITokenError, http.StatusInternalServerError)
 		return
 	}
 
@@ -154,7 +154,7 @@ func (handler *UserAPIHandler) HandleRefreshAPITokenDE(w http.ResponseWriter, r 
 	falseAttempts, _ := tools.GetValue(handler.redisClient, entity.PasswordFault+opUser.UserID)
 	attempts, _ := strconv.ParseInt(falseAttempts, 0, 64)
 	if attempts >= 5 {
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "too many attempts try after 24 hours"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.TooManyAttemptsError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -163,7 +163,7 @@ func (handler *UserAPIHandler) HandleRefreshAPITokenDE(w http.ResponseWriter, r 
 	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
 	opPassword, err := handler.uService.FindPassword(opUser.UserID)
 	if err != nil {
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid password used"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.InvalidPasswordError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -178,7 +178,7 @@ func (handler *UserAPIHandler) HandleRefreshAPITokenDE(w http.ResponseWriter, r 
 		tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
 			fmt.Sprintf("%d", attempts+1), time.Hour*24)
 
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid password used"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.InvalidPasswordError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -238,7 +238,7 @@ func (handler *UserAPIHandler) HandleAuthentication(w http.ResponseWriter, r *ht
 
 	// Frozen api client check
 	if handler.dService.ClientIsFrozen(apiKey) {
-		http.Error(w, "api client has been frozen", http.StatusForbidden)
+		http.Error(w, entity.FrozenAPIClientError, http.StatusForbidden)
 		return
 	}
 
@@ -304,7 +304,7 @@ func (handler *UserAPIHandler) HandleInitAuthorization(w http.ResponseWriter, r 
 	// Checking if the user exists
 	opUser, err := handler.uService.FindUser(identifier)
 	if err != nil {
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier or password used"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.InvalidPasswordOrIdentifierError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -312,7 +312,7 @@ func (handler *UserAPIHandler) HandleInitAuthorization(w http.ResponseWriter, r 
 
 	// Frozen user checking
 	if handler.dService.UserIsFrozen(opUser.UserID) {
-		http.Error(w, "account has been frozen", http.StatusForbidden)
+		http.Error(w, entity.FrozenAccountError, http.StatusForbidden)
 		return
 	}
 
@@ -320,7 +320,7 @@ func (handler *UserAPIHandler) HandleInitAuthorization(w http.ResponseWriter, r 
 	falseAttempts, _ := tools.GetValue(handler.redisClient, entity.PasswordFault+opUser.UserID)
 	attempts, _ := strconv.ParseInt(falseAttempts, 0, 64)
 	if attempts >= 5 {
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "too many attempts try after 24 hours"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.TooManyAttemptsError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -329,7 +329,7 @@ func (handler *UserAPIHandler) HandleInitAuthorization(w http.ResponseWriter, r 
 	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
 	opPassword, err := handler.uService.FindPassword(opUser.UserID)
 	if err != nil {
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier or password used"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.InvalidPasswordOrIdentifierError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -344,7 +344,7 @@ func (handler *UserAPIHandler) HandleInitAuthorization(w http.ResponseWriter, r 
 		tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
 			fmt.Sprintf("%d", attempts+1), time.Hour*24)
 
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier or password used"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.InvalidPasswordOrIdentifierError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -472,7 +472,7 @@ func (handler *UserAPIHandler) HandleCodeExchange(w http.ResponseWriter, r *http
 
 	err = handler.uService.AddAPIToken(newAPIToken, apiClient, opUser)
 	if err != nil {
-		http.Error(w, "unable to create an api token", http.StatusInternalServerError)
+		http.Error(w, entity.APITokenError, http.StatusInternalServerError)
 		return
 	}
 

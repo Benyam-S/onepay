@@ -94,7 +94,7 @@ func (service *Service) ValidateUserProfile(opUser *entity.User) entity.ErrMap {
 		}
 
 		if matchPhoneNumber && !service.userRepo.IsUnique("phone_number", opUser.PhoneNumber) {
-			errMap["phone_number"] = errors.New("phonenumber already exists")
+			errMap["phone_number"] = errors.New("phone number already exists")
 		}
 	} else {
 		// Meaning trying to update user
@@ -109,7 +109,7 @@ func (service *Service) ValidateUserProfile(opUser *entity.User) entity.ErrMap {
 
 		if matchPhoneNumber && prevProfile.PhoneNumber != opUser.PhoneNumber {
 			if !service.userRepo.IsUnique("phone_number", opUser.PhoneNumber) {
-				errMap["phone_number"] = errors.New("phonenumber already exists")
+				errMap["phone_number"] = errors.New("phone number already exists")
 			}
 		}
 	}

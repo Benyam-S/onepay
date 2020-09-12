@@ -26,3 +26,27 @@ const ReceiverNotFoundError = "no onepay user for the provided receiver id"
 
 // TransactionWSelfError is a constant that holds transaction with our own account is not allowed error
 const TransactionWSelfError = "cannot make transaction with your own account"
+
+// FrozenAccountError is a constant that holds account has been frozen error
+const FrozenAccountError = "account has been frozen"
+
+// FrozenAPIClientError is a constant that holds api client has been frozen error
+const FrozenAPIClientError = "api client has been frozen"
+
+// AmountParsingError is a constant that holds amount parsing error
+const AmountParsingError = "amount parsing error"
+
+// TooManyAttemptsError is a constant that holds too many attempts error
+const TooManyAttemptsError = "too many attempts try after 24 hours"
+
+// InvalidPasswordOrIdentifierError is a constant that holds invalid password or identifier error
+const InvalidPasswordOrIdentifierError = "invalid identifier or password used"
+
+// InvalidPasswordError is a constant that holds invalid password used error
+const InvalidPasswordError = "invalid password used"
+
+// InternalAPIClientError is a constant that holds unable to add an internal api client error
+const InternalAPIClientError = "unable to add an internal api client"
+
+// APITokenError is a constant that holds unable to create an api token error
+const APITokenError = "unable to create an api token"

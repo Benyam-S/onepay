@@ -30,7 +30,7 @@ func (handler *UserAPIHandler) HandleReceiveViaQRCode(w http.ResponseWriter, r *
 	falseAttempts, _ := tools.GetValue(handler.redisClient, entity.ReceiveFault+opUser.UserID)
 	attempts, _ := strconv.ParseInt(falseAttempts, 0, 64)
 	if attempts >= 5 {
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "too many attempts try after 24 hours"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.TooManyAttemptsError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return

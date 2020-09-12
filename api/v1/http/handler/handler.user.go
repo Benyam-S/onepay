@@ -197,7 +197,7 @@ func (handler *UserAPIHandler) HandleFinishAddUser(w http.ResponseWriter, r *htt
 	newAPIClient.Type = entity.APIClientTypeInternal
 	err = handler.uService.AddAPIClient(newAPIClient, newOPUser)
 	if err != nil {
-		http.Error(w, "unable to add an internal api client", http.StatusInternalServerError)
+		http.Error(w, entity.InternalAPIClientError, http.StatusInternalServerError)
 		return
 	}
 
@@ -205,7 +205,7 @@ func (handler *UserAPIHandler) HandleFinishAddUser(w http.ResponseWriter, r *htt
 	newAPIToken.Scopes = entity.ScopeAll
 	err = handler.uService.AddAPIToken(newAPIToken, newAPIClient, newOPUser)
 	if err != nil {
-		http.Error(w, "unable to create an api token", http.StatusInternalServerError)
+		http.Error(w, entity.APITokenError, http.StatusInternalServerError)
 		return
 	}
 
@@ -258,6 +258,13 @@ func (handler *UserAPIHandler) HandleGetUser(w http.ResponseWriter, r *http.Requ
 
 	if err != nil {
 		output, _ := tools.MarshalIndent(ErrorBody{Error: "user not found"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	if handler.dService.UserIsFrozen(opUser.UserID) {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.FrozenAccountError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return

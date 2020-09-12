@@ -25,7 +25,7 @@ func (handler *UserAPIHandler) HandleCreatePaymentToken(w http.ResponseWriter, r
 	amountString := r.FormValue("amount")
 	amount, err := strconv.ParseFloat(amountString, 64)
 	if err != nil {
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "amount parsing error"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.AmountParsingError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
