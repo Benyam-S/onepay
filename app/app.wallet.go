@@ -198,7 +198,7 @@ func (onepay *OnePay) WithdrawFromWallet(userID, linkedAccountID string, amount 
 	}
 
 	if opWallet.Amount < amount {
-		return errors.New("insufficient balance, please recharge your wallet")
+		return errors.New(entity.InsufficientBalanceError)
 	}
 
 	opWallet.Amount -= amount

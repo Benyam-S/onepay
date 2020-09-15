@@ -2,6 +2,8 @@ package app
 
 import (
 	"errors"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/Benyam-S/onepay/entity"
@@ -13,7 +15,13 @@ import (
 func (onepay *OnePay) CreatePaymentToken(userID string, amount float64) (*entity.MoneyToken, error) {
 
 	if !AboveTransactionBaseLimit(amount) {
-		return nil, errors.New("the provided amount is less than the transaction base limit")
+		return nil, errors.New(entity.TransactionBaseLimitError)
+	}
+
+	// Checking if the created token can be claimed since if the amount exceeds the daily transaction base limit no one can claim it
+	dailyTransactionLimit, _ := strconv.ParseFloat(os.Getenv(entity.DailyTransactionLimit), 64)
+	if amount > dailyTransactionLimit {
+		return nil, errors.New(entity.DailyTransactionLimitError)
 	}
 
 	opWallet, err := onepay.WalletService.FindWallet(userID)
@@ -42,41 +50,41 @@ func (onepay *OnePay) PayViaQRCode(receiverID string, code string, redisClient *
 
 	receiverOPWallet, err := onepay.WalletService.FindWallet(receiverID)
 	if err != nil {
-		return errors.New("unable to find user for the provided receiver id")
+		return errors.New(entity.ReceiverNotFoundError)
 	}
 
 	moneyToken, err := onepay.MoneyTokenService.FindMoneyToken(code)
 	if err != nil {
-		return err
+		return errors.New(entity.InvalidMoneyTokenError)
 	}
 
 	if !moneyToken.ExpirationDate.After(time.Now()) {
-		return errors.New("money token had past expiration date")
+		return errors.New(entity.ExpiredMoneyTokenError)
 	}
 
 	if !AboveTransactionBaseLimit(moneyToken.Amount) {
-		return errors.New("the provided amount is less than the transaction base limit")
+		return errors.New(entity.TransactionBaseLimitError)
 	}
 
 	if AboveDailyTransactionLimit(receiverID, moneyToken.Amount, redisClient) {
-		return errors.New("user has exceeded daily transaction limit")
+		return errors.New(entity.DailyTransactionLimitError)
 	}
 
 	if moneyToken.SenderID == receiverID {
-		return errors.New("cannot make transaction with your own account")
+		return errors.New(entity.TransactionWSelfError)
 	}
 
 	if moneyToken.Method != entity.MethodPaymentQRCode {
-		return errors.New("invalid method, code not found")
+		return errors.New(entity.InvalidMethodError)
 	}
 
 	senderOPWallet, err := onepay.WalletService.FindWallet(moneyToken.SenderID)
 	if err != nil {
-		return errors.New("unable to find user for the provided sender id")
+		return errors.New(entity.SenderNotFoundError)
 	}
 
 	if receiverOPWallet.Amount < moneyToken.Amount {
-		return errors.New("insufficient balance, please recharge your wallet")
+		return errors.New(entity.InsufficientBalanceError)
 	}
 
 	transactionFee := GetTransactionFee(moneyToken.Amount)

@@ -13,28 +13,28 @@ func (onepay *OnePay) ReceiveViaQRCode(receiverID string, code string) error {
 
 	receiverOPWallet, err := onepay.WalletService.FindWallet(receiverID)
 	if err != nil {
-		return errors.New("unable to find user for the provided receiver id")
+		return errors.New(entity.ReceiverNotFoundError)
 	}
 
 	moneyToken, err := onepay.MoneyTokenService.FindMoneyToken(code)
 	if err != nil {
-		return err
+		return errors.New(entity.InvalidMoneyTokenError)
 	}
 
 	if !moneyToken.ExpirationDate.After(time.Now()) {
-		return errors.New("money token had past expiration date")
+		return errors.New(entity.ExpiredMoneyTokenError)
 	}
 
 	if !AboveTransactionBaseLimit(moneyToken.Amount) {
-		return errors.New("the provided amount is less than the transaction base limit")
+		return errors.New(entity.TransactionBaseLimitError)
 	}
 
 	if moneyToken.SenderID == receiverID {
-		return errors.New("cannot make transaction with your own account")
+		return errors.New(entity.TransactionWSelfError)
 	}
 
 	if moneyToken.Method != entity.MethodTransactionQRCode {
-		return errors.New("invalid method, code not found")
+		return errors.New(entity.InvalidMethodError)
 	}
 
 	// Delete the money token first in case the use wallet fails to update

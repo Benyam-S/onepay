@@ -100,12 +100,18 @@ func transactionRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 		handler.Authorization, handler.APITokenDEValidation,
 		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
 
+	router.HandleFunc("/api/v1/oauth/receive/code.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetReceiveInfo,
+		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
+
 	router.HandleFunc("/api/v1/oauth/receive/code.{format:json|xml}", tools.MiddlewareFactory(handler.HandleReceiveViaQRCode,
-		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
+		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
+
+	router.HandleFunc("/api/v1/oauth/pay/code.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetPaymentInfo,
+		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
 
 	router.HandleFunc("/api/v1/oauth/pay/code.{format:json|xml}", tools.MiddlewareFactory(handler.HandlePayViaQRCode,
 		handler.Authorization, handler.APITokenDEValidation,
-		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
+		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
 
 	router.HandleFunc("/api/v1/oauth/pay/code.{format:json|xml}", tools.MiddlewareFactory(handler.HandleCreatePaymentToken,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")

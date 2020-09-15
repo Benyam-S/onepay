@@ -50,3 +50,12 @@ const InternalAPIClientError = "unable to add an internal api client"
 
 // APITokenError is a constant that holds unable to create an api token error
 const APITokenError = "unable to create an api token"
+
+// ExpiredMoneyTokenError is a constant that holds money token had expired error
+const ExpiredMoneyTokenError = "money token has passed expiration date"
+
+// InvalidMethodError is a constant that holds invalid method used error
+const InvalidMethodError = "invalid method, code not found"
+
+// InvalidMoneyTokenError is a constant that holds invalid money token used error
+const InvalidMoneyTokenError = "invalid money token used"
