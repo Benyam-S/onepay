@@ -11,7 +11,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 
 	"github.com/gorilla/mux"
 
@@ -30,17 +33,20 @@ import (
 
 // UserAPIHandler is a type that defines a user handler for api client
 type UserAPIHandler struct {
-	app         *app.OnePay
-	uService    user.IService
-	dService    deleted.IService
-	redisClient *redis.Client
+	sync.Mutex
+	app                  *app.OnePay
+	uService             user.IService
+	dService             deleted.IService
+	redisClient          *redis.Client
+	upgrader             websocket.Upgrader
+	activeSocketChannels map[string][]chan interface{}
 }
 
 // NewUserAPIHandler is a function that returns a new user api handler
 func NewUserAPIHandler(commonApp *app.OnePay, userService user.IService, deletedService deleted.IService,
-	redisClient *redis.Client) *UserAPIHandler {
+	redisClient *redis.Client, upgrader websocket.Upgrader) *UserAPIHandler {
 	return &UserAPIHandler{app: commonApp, uService: userService, dService: deletedService,
-		redisClient: redisClient}
+		redisClient: redisClient, upgrader: upgrader}
 }
 
 /* +++++++++++++++++++++++++++++++++++++++++++++ ADDING NEW USER +++++++++++++++++++++++++++++++++++++++++++++ */

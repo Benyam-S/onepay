@@ -7,5 +7,6 @@ type IWalletRepository interface {
 	Create(newOPWallet *entity.UserWallet) error
 	Find(identifier string) (*entity.UserWallet, error)
 	Update(opWallet *entity.UserWallet) error
+	UpdateSeen(opWallet *entity.UserWallet, value bool) error
 	Delete(identifier string) (*entity.UserWallet, error)
 }

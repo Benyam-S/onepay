@@ -57,6 +57,24 @@ func (repo *WalletRepository) Update(opWallet *entity.UserWallet) error {
 	return nil
 }
 
+// UpdateSeen is a method that updates a certain user wallet's seen value in the database
+func (repo *WalletRepository) UpdateSeen(opWallet *entity.UserWallet, value bool) error {
+
+	prevOPWallet := new(entity.UserWallet)
+	err := repo.conn.Model(prevOPWallet).Where("user_id = ?", opWallet.UserID).First(prevOPWallet).Error
+
+	if err != nil {
+		return err
+	}
+
+	// Since we are only changing the seen value we have to keep the previous updated time
+	err = repo.conn.Exec("UPDATE user_wallets SET seen = ? WHERE user_id = ?", value, opWallet.UserID).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Delete is a method that deletes a certain user's wallet from the database using an identifier.
 // In Delete() user_id is only used as a key
 func (repo *WalletRepository) Delete(identifier string) (*entity.UserWallet, error) {

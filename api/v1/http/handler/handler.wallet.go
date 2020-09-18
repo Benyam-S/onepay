@@ -70,6 +70,28 @@ func (handler *UserAPIHandler) HandleDrainWallet(w http.ResponseWriter, r *http.
 	}
 }
 
+// HandleMarkWalletAsViewed is a handler func that handles the request for marking wallet as viewed
+func (handler *UserAPIHandler) HandleMarkWalletAsViewed(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
+
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	format := mux.Vars(r)["format"]
+	err := handler.app.MarkWalletAsViewed(opUser.UserID)
+
+	if err != nil {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+}
+
 // HandleRechargeWallet is a handler func that handles the request for recharging user wallet
 func (handler *UserAPIHandler) HandleRechargeWallet(w http.ResponseWriter, r *http.Request) {
 

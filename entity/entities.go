@@ -39,20 +39,24 @@ type UserPassword struct {
 
 // UserWallet is a type that defines a OnePay user wallet
 type UserWallet struct {
-	UserID string  `gorm:"primary_key; unique; not null"`
-	Amount float64 `gorm:"not null"`
+	UserID    string  `gorm:"primary_key; unique; not null"`
+	Amount    float64 `gorm:"not null"`
+	Seen      bool    `gorm:"default: true;"`
+	UpdatedAt time.Time
 }
 
 // UserHistory is a type that defines a OnePay user's history
 type UserHistory struct {
-	ID         int    `gorm:"primary_key; unique; not null"`
-	SenderID   string `gorm:"not null"`
-	ReceiverID string `gorm:"not null"`
-	SentAt     time.Time
-	ReceivedAt time.Time
-	Method     string  `gorm:"not null"`
-	Code       string  `gorm:"not null"`
-	Amount     float64 `gorm:"not null"`
+	ID           int    `gorm:"primary_key; unique; not null"`
+	SenderID     string `gorm:"not null"`
+	ReceiverID   string `gorm:"not null"`
+	SentAt       time.Time
+	ReceivedAt   time.Time
+	Method       string  `gorm:"not null"`
+	Code         string  `gorm:"not null"`
+	Amount       float64 `gorm:"not null"`
+	SenderSeen   bool    `gorm:"default: false;"`
+	ReceiverSeen bool    `gorm:"default: false;"`
 }
 
 // MoneyToken is a type that defines a token generated for qr code

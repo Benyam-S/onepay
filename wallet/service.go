@@ -7,5 +7,6 @@ type IService interface {
 	AddWallet(newWallet *entity.UserWallet) error
 	FindWallet(identifier string) (*entity.UserWallet, error)
 	UpdateWallet(wallet *entity.UserWallet) error
+	UpdateWalletSeen(userID string, columnValue bool) error
 	DeleteWallet(identifier string) (*entity.UserWallet, error)
 }

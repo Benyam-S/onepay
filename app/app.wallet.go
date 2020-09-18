@@ -79,6 +79,17 @@ func (onepay *OnePay) DrainWallet(userID, linkedAccountID string) error {
 		amount, time.Now(), time.Now())
 }
 
+// MarkWalletAsViewed is a method that marks the wallet change as viewed
+func (onepay *OnePay) MarkWalletAsViewed(userID string) error {
+
+	err := onepay.WalletService.UpdateWalletSeen(userID, true)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // AddUserHistory is a method that add user history for the onepay app methods
 func (onepay *OnePay) AddUserHistory(senderID, receiverID, method, code string,
 	amount float64, sentAt, receivedAt time.Time) error {

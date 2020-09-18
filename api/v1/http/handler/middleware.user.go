@@ -12,7 +12,7 @@ import (
 	"github.com/Benyam-S/onepay/tools"
 )
 
-// AccessTokenAuthentication is a middleware that validates a request contain a valid onepay access token
+// AccessTokenAuthentication is a middleware that validates whether a request contain a valid onepay access token
 func (handler *UserAPIHandler) AccessTokenAuthentication(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -55,8 +55,8 @@ func (handler *UserAPIHandler) AccessTokenAuthentication(next http.HandlerFunc) 
 	}
 }
 
-// APITokenDEValidation is a middleware that checks an api token hasn't passed it daily expiration time
-func (UserAPIHandler) APITokenDEValidation(next http.HandlerFunc) http.HandlerFunc {
+// APITokenDEValidation is a middleware that checks whether an api token hasn't passed it daily expiration time
+func (*UserAPIHandler) APITokenDEValidation(next http.HandlerFunc) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -82,7 +82,7 @@ func (UserAPIHandler) APITokenDEValidation(next http.HandlerFunc) http.HandlerFu
 	}
 }
 
-// Authorization is a middleware that authorize a given api token has a valid onepay user
+// Authorization is a middleware that authorize whether a given api token has a valid onepay user
 func (handler *UserAPIHandler) Authorization(next http.HandlerFunc) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {

@@ -1,12 +1,40 @@
 <!DOCTYPE html>
 <html>
-    <head>
+  <head> </head>
+  <body>
+    <!-- <form
+      enctype="multipart/form-data"
+      method="POST"
+      action="http://localhost:8080/api/v1/oauth/user/pic?onepay_access_token=OP_Token-d8b06649-3e3a-408f-b288-c8082f2d6e06"
+    >
+      <input type="file" name="profile_pic" />
+      <input type="submit" name="submit" value="submit" />
+    </form> -->
 
-    </head>
-    <body>
-        <form enctype="multipart/form-data" method="POST" action="http://localhost:8080/api/v1/oauth/user/pic?onepay_access_token=OP_Token-d8b06649-3e3a-408f-b288-c8082f2d6e06">
-            <input type="file" name="profile_pic">
-            <input type="submit" name="submit" value="submit">
-        </form>
-    </body>
+    <script>
+      let socket = new WebSocket("ws://localhost:8080/api/v1/connect.json/OP_API-1000101101013_b004YI5/OP_Token-e3259662-5533-41be-97bf-a15bb59c4b1c");
+
+      socket.onopen = function (e) {
+        console.log("[open] Connection established");
+      };
+
+      socket.onmessage = function (event) {
+        console.log(`[message] Data received from server: ${event.data}`);
+      };
+
+      socket.onclose = function (event) {
+        if (event.wasClean) {
+          console.log(
+            `[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`
+          );
+        } else {
+          console.log("[close] Connection died");
+        }
+      };
+
+      socket.onerror = function (error) {
+        console.log(`[error] ${error.message}`);
+      };
+    </script>
+  </body>
 </html>

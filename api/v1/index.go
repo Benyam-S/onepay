@@ -16,6 +16,7 @@ func Start(handler *handler.UserAPIHandler, router *mux.Router) {
 	walletNHistoryRoutes(handler, router)
 	linkedAccountRoutes(handler, router)
 	moneyTokenRoutes(handler, router)
+	websocketRoutes(handler, router)
 
 }
 
@@ -123,6 +124,9 @@ func walletNHistoryRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 	router.HandleFunc("/api/v1/oauth/user/wallet.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetUserWallet,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
 
+	router.HandleFunc("/api/v1/oauth/user/wallet.{format:json|xml}", tools.MiddlewareFactory(handler.HandleMarkWalletAsViewed,
+		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
+
 	router.HandleFunc("/api/v1/oauth/user/wallet/recharge.{format:json|xml}", tools.MiddlewareFactory(handler.HandleRechargeWallet,
 		handler.Authorization, handler.APITokenDEValidation,
 		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
@@ -137,6 +141,9 @@ func walletNHistoryRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 
 	router.HandleFunc("/api/v1/oauth/user/history.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetUserHistory,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
+
+	router.HandleFunc("/api/v1/oauth/user/history.{format:json|xml}", tools.MiddlewareFactory(handler.HandleMarkHistoriesAsViewed,
+		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
 }
 
 // linkedAccountRoutes is a function that defines all the routes for accessing linked accounts of a certain user
@@ -170,4 +177,14 @@ func moneyTokenRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 
 	router.HandleFunc("/api/v1/oauth/user/moneytoken/remove.{format:json|xml}", tools.MiddlewareFactory(handler.HandleRemoveMoneyTokens,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
+}
+
+// websocketRoutes is a function that defines all websocket related routes
+func websocketRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
+
+	router.HandleFunc("/api/v1/connect.{format:json|xml}/{api_key}/{access_token}", tools.MiddlewareFactory(handler.HandleCreateWebsocket,
+		handler.Authorization, handler.WebsocketAccessTokenAuthentication))
+
+	router.HandleFunc("/api/v1/listener/wallet", handler.HandleListenToWalletChange).Methods("PUT")
+
 }

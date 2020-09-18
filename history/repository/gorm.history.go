@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/Benyam-S/onepay/entity"
@@ -43,12 +44,13 @@ func (repo *HistoryRepository) Find(identifier int64) (*entity.UserHistory, erro
 }
 
 // Search is a method that search and returns a set of user histories from the database using an identifier.
-func (repo *HistoryRepository) Search(key, orderBy string, methods []string, pageNum int64, columns ...string) []*entity.UserHistory {
+func (repo *HistoryRepository) Search(key, orderBy string, methods []string, pageNum int64, columns ...string) ([]*entity.UserHistory, int64) {
 
 	var opHistories []*entity.UserHistory
 	var whereStmt1 []string
 	var whereStmt2 []string
 	var sqlValues []interface{}
+	var count float64
 
 	for _, column := range columns {
 		whereStmt1 = append(whereStmt1, fmt.Sprintf(" %s = ? ", column))
@@ -60,12 +62,15 @@ func (repo *HistoryRepository) Search(key, orderBy string, methods []string, pag
 		sqlValues = append(sqlValues, method)
 	}
 
+	repo.conn.Raw("SELECT COUNT(*) FROM user_history WHERE ("+strings.Join(whereStmt1, "||")+") && ("+strings.Join(whereStmt2, "||")+")", sqlValues...).Count(&count)
+
 	sqlValues = append(sqlValues, orderBy)
 	sqlValues = append(sqlValues, pageNum*20)
 
 	repo.conn.Raw("SELECT * FROM user_history WHERE ("+strings.Join(whereStmt1, "||")+") && ("+strings.Join(whereStmt2, "||")+") ORDER BY ? DESC LIMIT ?, 20", sqlValues...).Scan(&opHistories)
 
-	return opHistories
+	var pageCount int64 = int64(math.Ceil(count / 20.0))
+	return opHistories, pageCount
 }
 
 // All is a method that returns a set of user histories that is related to the key identifier
@@ -96,6 +101,28 @@ func (repo *HistoryRepository) Update(opHistory *entity.UserHistory) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// MarkAsSeen is a method that marks a certain user histories as seen in the database
+// We did this process in the repository layer because it can cumbersome if we lift the process up ward
+func (repo *HistoryRepository) MarkAsSeen(userID string) error {
+
+	var unmarkedOPHistories []*entity.UserHistory
+	err := repo.conn.Model(&entity.UserHistory{}).Where("(sender_id = ? || receiver_id = ?) && (sender_seen = false || receiver_seen = false)",
+		userID, userID).Find(&unmarkedOPHistories).Error
+	if err != nil {
+		return err
+	}
+
+	for _, unmarkedOPHistory := range unmarkedOPHistories {
+		if unmarkedOPHistory.SenderID == userID {
+			repo.conn.Model(unmarkedOPHistory).Update(map[string]interface{}{"sender_seen": true})
+		} else if unmarkedOPHistory.ReceiverID == userID {
+			repo.conn.Model(unmarkedOPHistory).Update(map[string]interface{}{"receiver_seen": true})
+		}
+	}
+
 	return nil
 }
 

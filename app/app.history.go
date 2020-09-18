@@ -3,11 +3,12 @@ package app
 import "github.com/Benyam-S/onepay/entity"
 
 // UserHistory is a method that returns the user history only
-func (onepay *OnePay) UserHistory(userID string, pagenation int64, viewBys ...string) []*entity.UserHistory {
+func (onepay *OnePay) UserHistory(userID string, pagenation int64, viewBys ...string) ([]*entity.UserHistory, int64) {
 
 	orderBy := "id"
 	opHistories := make([]*entity.UserHistory, 0)
 	length := len(viewBys)
+	var largestPageCount int64 = 0
 
 	for _, viewBy := range viewBys {
 
@@ -67,10 +68,19 @@ func (onepay *OnePay) UserHistory(userID string, pagenation int64, viewBys ...st
 			continue
 		}
 
-		result := onepay.HistoryService.SearchHistories(userID, orderBy, methods, pagenation, searchColumns...)
+		result, pageCount := onepay.HistoryService.SearchHistories(userID, orderBy, methods, pagenation, searchColumns...)
 		opHistories = append(opHistories, result...)
+
+		if largestPageCount < pageCount {
+			largestPageCount = pageCount
+		}
 
 	}
 
-	return opHistories
+	return opHistories, largestPageCount
+}
+
+// MarkUserHistoriesAsViewed is a method that marks a certain user's histories as viewed
+func (onepay *OnePay) MarkUserHistoriesAsViewed(userID string) error {
+	return onepay.HistoryService.MarkUserHistoriesAsSeen(userID)
 }

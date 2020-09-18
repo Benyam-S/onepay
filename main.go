@@ -11,7 +11,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Benyam-S/onepay/notifier"
+
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 
 	"github.com/Benyam-S/onepay/api"
 	v1 "github.com/Benyam-S/onepay/api/v1"
@@ -59,6 +62,7 @@ type SystemConfig struct {
 	CookieName      string            `json:"cookie_name"`
 	SecretKey       string            `json:"secret_key"`
 	SuperAdminEmail string            `json:"super_admin_email"`
+	ListenerURI     string            `json:"listener_uri"`
 	DomainName      string            `json:"domain_name"`
 	ServerPort      string            `json:"server_port"`
 }
@@ -123,10 +127,14 @@ func initServer() {
 	frozenUserRepo := delRepository.NewFrozenUserRepository(mysqlDB)
 	frozenClientRepo := delRepository.NewFrozenClientRepository(mysqlDB)
 
+	/* +++++++++++++++++++++++++++ NOTIFIERS +++++++++++++++++++++++++++ */
+	walletChangeNotifier := notifier.NewNotifier(sysConfig.ListenerURI)
+	/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
 	userService := urService.NewUserService(userRepo, passwordRepo, sessionRepo, apiClientRepo, apiTokenRepo)
 	deletedService := delService.NewDeletedService(deletedUserRepo, deletedLinkedAccountRepo,
 		frozenUserRepo, frozenClientRepo)
-	walletService := walService.NewWalletService(walletRepo)
+	walletService := walService.NewWalletService(walletRepo, walletChangeNotifier)
 	historyService := hisService.NewHistoryService(historyRepo)
 	linkedAccountService := linkService.NewLinkedAccountService(linkedAccountRepo)
 	moneyTokenService := mtService.NewMoneyTokenService(moneyTokenRepo)
@@ -135,12 +143,16 @@ func initServer() {
 	path = filepath.Join(path, "./logger")
 	dataLogger := logger.NewLogger(path)
 	channel := make(chan string)
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
 
 	onepay = app.NewApp(walletService, historyService, linkedAccountService, moneyTokenService,
 		dataLogger, channel)
 
 	userHandler = urHandler.NewUserHandler(userService, redisClient)
-	userAPIHandler = urAPIHandler.NewUserAPIHandler(onepay, userService, deletedService, redisClient)
+	userAPIHandler = urAPIHandler.NewUserAPIHandler(onepay, userService, deletedService, redisClient, upgrader)
 }
 
 // initDB initialize the database for takeoff

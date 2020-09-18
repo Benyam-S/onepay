@@ -6,5 +6,7 @@ CREATE TABLE user_history (
     received_at VARCHAR,
     method VARCHAR,
     code VARCHAR,
-    amount FLOAT
+    amount FLOAT,
+    sender_seen BOOLEAN,
+    receiver_seen BOOLEAN
 );
