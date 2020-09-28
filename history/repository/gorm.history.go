@@ -63,13 +63,9 @@ func (repo *HistoryRepository) Search(key, orderBy string, methods []string, pag
 	}
 
 	repo.conn.Raw("SELECT COUNT(*) FROM user_history WHERE ("+strings.Join(whereStmt1, "||")+") && ("+strings.Join(whereStmt2, "||")+")", sqlValues...).Count(&count)
+	repo.conn.Raw("SELECT * FROM user_history WHERE ("+strings.Join(whereStmt1, "||")+") && ("+strings.Join(whereStmt2, "||")+")", sqlValues...).Order(orderBy + " DESC").Limit(5).Offset(pageNum * 5).Scan(&opHistories)
 
-	sqlValues = append(sqlValues, orderBy)
-	sqlValues = append(sqlValues, pageNum*20)
-
-	repo.conn.Raw("SELECT * FROM user_history WHERE ("+strings.Join(whereStmt1, "||")+") && ("+strings.Join(whereStmt2, "||")+") ORDER BY ? DESC LIMIT ?, 20", sqlValues...).Scan(&opHistories)
-
-	var pageCount int64 = int64(math.Ceil(count / 20.0))
+	var pageCount int64 = int64(math.Ceil(count / 5.0))
 	return opHistories, pageCount
 }
 

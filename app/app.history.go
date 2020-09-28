@@ -62,7 +62,8 @@ func (onepay *OnePay) UserHistory(userID string, pagenation int64, viewBys ...st
 		} else if viewBy == "all" && length == 1 {
 			searchColumns = append(searchColumns, "sender_id", "receiver_id")
 			methods = append(methods, entity.MethodTransactionOnePayID,
-				entity.MethodTransactionQRCode, entity.MethodPaymentQRCode)
+				entity.MethodTransactionQRCode, entity.MethodPaymentQRCode,
+				entity.MethodWithdrawn, entity.MethodRecharged)
 		} else {
 			// If it is unkown view by
 			continue

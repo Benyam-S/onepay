@@ -6,16 +6,18 @@ import (
 
 	"github.com/Benyam-S/onepay/entity"
 	"github.com/Benyam-S/onepay/history"
+	"github.com/Benyam-S/onepay/notifier"
 )
 
 // Service is a type that defines history service
 type Service struct {
 	historyRepo history.IHistoryRepository
+	notifier    *notifier.Notifier
 }
 
 // NewHistoryService is a function that returns a new history service
-func NewHistoryService(historyRepository history.IHistoryRepository) history.IService {
-	return &Service{historyRepo: historyRepository}
+func NewHistoryService(historyRepository history.IHistoryRepository, historyChangeNotifier *notifier.Notifier) history.IService {
+	return &Service{historyRepo: historyRepository, notifier: historyChangeNotifier}
 }
 
 // AddHistory is a method that adds a new user history to the system
@@ -25,6 +27,11 @@ func (service *Service) AddHistory(newOPHistory *entity.UserHistory) error {
 	if err != nil {
 		return errors.New("unable to add new history")
 	}
+
+	/* ++++++++++++++ NOTIFYING CHANGE +++++++++++++++ */
+	service.notifier.NotifyHistoryChange(newOPHistory)
+	/* +++++++++++++++++++++++++++++++++++++++++++++++ */
+
 	return nil
 }
 

@@ -128,14 +128,14 @@ func initServer() {
 	frozenClientRepo := delRepository.NewFrozenClientRepository(mysqlDB)
 
 	/* +++++++++++++++++++++++++++ NOTIFIERS +++++++++++++++++++++++++++ */
-	walletChangeNotifier := notifier.NewNotifier(sysConfig.ListenerURI)
+	changeNotifier := notifier.NewNotifier(sysConfig.ListenerURI)
 	/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 	userService := urService.NewUserService(userRepo, passwordRepo, sessionRepo, apiClientRepo, apiTokenRepo)
 	deletedService := delService.NewDeletedService(deletedUserRepo, deletedLinkedAccountRepo,
 		frozenUserRepo, frozenClientRepo)
-	walletService := walService.NewWalletService(walletRepo, walletChangeNotifier)
-	historyService := hisService.NewHistoryService(historyRepo)
+	walletService := walService.NewWalletService(walletRepo, changeNotifier)
+	historyService := hisService.NewHistoryService(historyRepo, changeNotifier)
 	linkedAccountService := linkService.NewLinkedAccountService(linkedAccountRepo)
 	moneyTokenService := mtService.NewMoneyTokenService(moneyTokenRepo)
 
