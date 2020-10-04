@@ -117,6 +117,14 @@ func (UserHistory) TableName() string {
 	return "user_history"
 }
 
+// LinkedAccountContainer is a struct that contains a filtered linked account without unnecessary values
+type LinkedAccountContainer struct {
+	ID              string
+	UserID          string
+	AccountID       string
+	AccountProvider string
+}
+
 // AccountInfo is type that defines an external account information
 type AccountInfo struct {
 	Amount          float64

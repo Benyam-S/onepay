@@ -40,10 +40,17 @@ func (handler *UserAPIHandler) HandleRefreshMoneyTokens(w http.ResponseWriter, r
 		return
 	}
 
+	type MoneyTokenError struct {
+		Code  string
+		Error string
+	}
+
 	format := mux.Vars(r)["format"]
 	codesString := r.FormValue("codes")
 
-	errMap := make(entity.ErrMap)
+	refreshedMoneyTokens := make([]*entity.MoneyToken, 0)
+	nonRefreshedMoneyTokens := make([]*MoneyTokenError, 0)
+
 	codes := make([]string, 0)
 	empty, _ := regexp.MatchString(`^\s*$`, codesString)
 	if !empty {
@@ -53,17 +60,38 @@ func (handler *UserAPIHandler) HandleRefreshMoneyTokens(w http.ResponseWriter, r
 	for _, code := range codes {
 		err := handler.app.RefreshMoneyToken(code, opUser.UserID)
 		if err != nil {
-			errMap[code] = err
+			errMT := new(MoneyTokenError)
+			errMT.Code = code
+			errMT.Error = err.Error()
+			nonRefreshedMoneyTokens = append(nonRefreshedMoneyTokens, errMT)
+		} else {
+			moneyToken, err := handler.app.MoneyTokenService.FindMoneyToken(code)
+			if err == nil {
+				refreshedMoneyTokens = append(refreshedMoneyTokens, moneyToken)
+			}
 		}
 	}
 
 	// Meaning some of the codes hasn't been refreshed
-	if len(errMap) != 0 {
-		output, _ := tools.MarshalIndent(errMap.StringMap(), "", "\t", format)
+	if len(nonRefreshedMoneyTokens) != 0 {
+
+		type CRefreshedMoneyTokens struct {
+			NonRefreshed []*MoneyTokenError
+			Refreshed    []*entity.MoneyToken
+		}
+
+		output, _ := tools.MarshalIndent(CRefreshedMoneyTokens{
+			NonRefreshed: nonRefreshedMoneyTokens,
+			Refreshed:    refreshedMoneyTokens}, "", "\t", format)
 		w.WriteHeader(http.StatusConflict)
 		w.Write(output)
 		return
 	}
+
+	output, _ := tools.MarshalIndent(refreshedMoneyTokens, "", "\t", format)
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+	return
 
 }
 

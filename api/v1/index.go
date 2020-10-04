@@ -158,6 +158,9 @@ func linkedAccountRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 	router.HandleFunc("/api/v1/oauth/user/linkedaccount.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetUserLinkedAccounts,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
 
+	router.HandleFunc("/api/v1/oauth/user/linkedaccount/{id}.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetAccountInfo,
+		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
+
 	router.HandleFunc("/api/v1/oauth/user/linkedaccount.{format:json|xml}", tools.MiddlewareFactory(handler.HandleRemoveLinkedAccount,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("DELETE")
 

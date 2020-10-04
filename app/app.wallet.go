@@ -133,16 +133,17 @@ func (onepay *OnePay) RechargeWallet(userID, linkedAccountID string, amount floa
 
 	opWallet, err := onepay.WalletService.FindWallet(userID)
 	if err != nil {
-		return err
+		return errors.New("user wallet not found")
 	}
 
 	linkedAccount, err := onepay.LinkedAccountService.FindLinkedAccount(linkedAccountID)
 	if err != nil {
-		return err
+		return errors.New("linked account not found")
 	}
 
 	if linkedAccount.UserID != userID {
-		return errors.New("linked account doesn't belong to the provided user")
+		// It is appropirate to this that "linked account doesn't belong to the provided user"
+		return errors.New("linked account not found")
 	}
 
 	accountInfo, err := middleman.GetAccountInfo(linkedAccount.AccountID, linkedAccount.AccessToken)

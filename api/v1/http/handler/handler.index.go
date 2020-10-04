@@ -12,14 +12,6 @@ type CodeBody struct {
 	Code string `xml:"code" json:"code"`
 }
 
-// LinkedAccountBody is a struct that contain both the account info the linked account values
-type LinkedAccountBody struct {
-	ID              string
-	AccountID       string
-	AccountProvider string
-	Amount          float64
-}
-
 // HistoriesContainer is a struct that contain a single request histories with it's page count
 type HistoriesContainer struct {
 	Result      []*entity.UserHistory

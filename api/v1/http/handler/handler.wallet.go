@@ -127,6 +127,15 @@ func (handler *UserAPIHandler) HandleRechargeWallet(w http.ResponseWriter, r *ht
 	}
 
 	if err != nil && err.Error() != entity.HistoryCheckpointError {
+
+		// Blacklisting error
+		if err.Error() == "user wallet not found" {
+			output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(output)
+			return
+		}
+
 		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)

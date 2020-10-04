@@ -14,22 +14,22 @@ import (
 )
 
 // GetUserLinkedAccounts is a method that returns a set user's linked accounts
-func (onepay *OnePay) GetUserLinkedAccounts(userID string) map[*entity.LinkedAccount]*entity.AccountInfo {
+func (onepay *OnePay) GetUserLinkedAccounts(userID string) []*entity.LinkedAccountContainer {
 
-	linkedAccountsMap := make(map[*entity.LinkedAccount]*entity.AccountInfo)
 	linkedAccounts := onepay.LinkedAccountService.SearchLinkedAccounts("user_id", userID)
+	linkedAccountsFiltered := make([]*entity.LinkedAccountContainer, 0)
 
 	for _, linkedAccount := range linkedAccounts {
-		accountInfo, err := middleman.GetAccountInfo(linkedAccount.AccountID, linkedAccount.AccessToken)
-		if err != nil {
-			accountInfo = new(entity.AccountInfo)
-			accountInfo.AccountID = "error"
-			accountInfo.AccountProvider = "error"
-		}
-		linkedAccountsMap[linkedAccount] = accountInfo
+		filteredLinkedAccount := new(entity.LinkedAccountContainer)
+		filteredLinkedAccount.ID = linkedAccount.ID
+		filteredLinkedAccount.UserID = linkedAccount.UserID
+		filteredLinkedAccount.AccountID = linkedAccount.AccountID
+		filteredLinkedAccount.AccountProvider = linkedAccount.AccountProvider
+
+		linkedAccountsFiltered = append(linkedAccountsFiltered, filteredLinkedAccount)
 	}
 
-	return linkedAccountsMap
+	return linkedAccountsFiltered
 
 }
 
