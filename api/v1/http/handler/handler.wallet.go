@@ -178,6 +178,16 @@ func (handler *UserAPIHandler) HandleWithdrawFromWallet(w http.ResponseWriter, r
 	}
 
 	if err != nil && err.Error() != entity.HistoryCheckpointError {
+
+		// Blacklisting error
+		if err.Error() == "user wallet not found" ||
+			err.Error() == "unable to update user wallet" {
+			output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(output)
+			return
+		}
+
 		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)

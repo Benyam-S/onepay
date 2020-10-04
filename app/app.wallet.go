@@ -193,20 +193,20 @@ func (onepay *OnePay) WithdrawFromWallet(userID, linkedAccountID string, amount 
 
 	opWallet, err := onepay.WalletService.FindWallet(userID)
 	if err != nil {
-		return err
+		return errors.New("user wallet not found")
 	}
 
 	linkedAccount, err := onepay.LinkedAccountService.FindLinkedAccount(linkedAccountID)
 	if err != nil {
-		return err
+		return errors.New("linked account not found")
 	}
 
 	if linkedAccount.UserID != userID {
-		return errors.New("linked account doesn't belong to the provided user")
+		return errors.New("linked account not found")
 	}
 
 	if !AboveWithdrawBaseLimit(amount) {
-		return errors.New("the provided amount is less than the withdraw base limit")
+		return errors.New(entity.WithdrawBaseLimitError)
 	}
 
 	if opWallet.Amount < amount {

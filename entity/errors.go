@@ -12,6 +12,9 @@ const HistoryCheckpointError = "history checkpoint error"
 // TransactionBaseLimitError is a constant that holds transaction base limit error
 const TransactionBaseLimitError = "amount is less than transaction base limit"
 
+// WithdrawBaseLimitError is a constant that holds withdraw base limit error
+const WithdrawBaseLimitError = "amount is less than the withdraw base limit"
+
 // DailyTransactionLimitError is a constant that holds daily transaction limit error
 const DailyTransactionLimitError = "user has exceeded daily transaction limit"
 
