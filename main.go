@@ -16,6 +16,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 
+	apRepository "github.com/Benyam-S/onepay/accountprovider/repository"
+	apService "github.com/Benyam-S/onepay/accountprovider/service"
 	"github.com/Benyam-S/onepay/api"
 	v1 "github.com/Benyam-S/onepay/api/v1"
 	urAPIHandler "github.com/Benyam-S/onepay/api/v1/http/handler"
@@ -126,6 +128,7 @@ func initServer() {
 	deletedLinkedAccountRepo := delRepository.NewDeletedLinkedAccountRepository(mysqlDB)
 	frozenUserRepo := delRepository.NewFrozenUserRepository(mysqlDB)
 	frozenClientRepo := delRepository.NewFrozenClientRepository(mysqlDB)
+	accountProviderRepo := apRepository.NewAccountProviderRepository(mysqlDB)
 
 	/* +++++++++++++++++++++++++++ NOTIFIERS +++++++++++++++++++++++++++ */
 	changeNotifier := notifier.NewNotifier(sysConfig.ListenerURI)
@@ -138,6 +141,7 @@ func initServer() {
 	historyService := hisService.NewHistoryService(historyRepo, changeNotifier)
 	linkedAccountService := linkService.NewLinkedAccountService(linkedAccountRepo)
 	moneyTokenService := mtService.NewMoneyTokenService(moneyTokenRepo)
+	accountProviderService := apService.NewAccountProviderService(accountProviderRepo)
 
 	path, _ := os.Getwd()
 	path = filepath.Join(path, "./logger")
@@ -148,11 +152,12 @@ func initServer() {
 		WriteBufferSize: 1024,
 	}
 
-	onepay = app.NewApp(walletService, historyService, linkedAccountService, moneyTokenService,
-		dataLogger, channel)
+	onepay = app.NewApp(walletService, historyService, linkedAccountService,
+		moneyTokenService, accountProviderService, dataLogger, channel)
 
 	userHandler = urHandler.NewUserHandler(userService, redisClient)
-	userAPIHandler = urAPIHandler.NewUserAPIHandler(onepay, userService, deletedService, redisClient, upgrader)
+	userAPIHandler = urAPIHandler.NewUserAPIHandler(onepay, userService, deletedService,
+		accountProviderService, redisClient, upgrader)
 }
 
 // initDB initialize the database for takeoff
@@ -187,16 +192,17 @@ func initDB() {
 	mysqlDB.AutoMigrate(&entity.LinkedAccount{})
 	mysqlDB.AutoMigrate(&entity.DeletedUser{})
 	mysqlDB.AutoMigrate(&entity.DeletedLinkedAccount{})
+	mysqlDB.AutoMigrate(&entity.AccountProvider{})
 
-	// ----------------------------- This must be changed -----------------------------
+	/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 	count := 0
-	mysqlDB.Exec("CREATE TABLE IF NOT EXISTS extras (total_user_count int)")
-	mysqlDB.Table("extras").Count(&count)
+	mysqlDB.AutoMigrate(&entity.Extras{})
+	mysqlDB.Model(&entity.Extras{}).Count(&count)
 	if count != 1 {
-		mysqlDB.Exec("DELETE FROM extras")
-		mysqlDB.Exec("INSERT INTO extras VALUES (0)")
+		mysqlDB.Delete(&entity.Extras{})
+		mysqlDB.Model(&entity.Extras{}).Save(&entity.Extras{TotalUsersCount: 0})
 	}
-	// --------------------------------------------------------------------------------
+	/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 }
 
 func main() {

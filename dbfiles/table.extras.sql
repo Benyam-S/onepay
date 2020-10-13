@@ -1,3 +1,3 @@
 CREATE TABLE extras (
-    total_user_count INT
+    total_users_count INT
 );

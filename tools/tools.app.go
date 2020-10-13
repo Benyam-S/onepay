@@ -40,7 +40,7 @@ func ClosingFile(opUser *entity.Staff, histories []*entity.UserHistory,
 	}
 
 	for _, linkedAccount := range linkedAccounts {
-		line := "Account ID: " + linkedAccount.AccountID + "	Account Provider: " + linkedAccount.AccountProvider + "\n"
+		line := "Account ID: " + linkedAccount.AccountID + "	Account Provider: " + linkedAccount.AccountProviderID + "\n"
 		_, err = file.WriteString(line)
 		if err != nil {
 			return "", err

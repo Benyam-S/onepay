@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/Benyam-S/onepay/deleted"
@@ -59,21 +60,25 @@ func (repo *DeletedLinkedAccountRepository) Search(colunmName string, columnValu
 }
 
 // SearchMultiple is a method that search and returns a set of deleted linked accounts from the database using an identifier.
-func (repo *DeletedLinkedAccountRepository) SearchMultiple(key string, pageNum int64, columns ...string) []*entity.DeletedLinkedAccount {
+func (repo *DeletedLinkedAccountRepository) SearchMultiple(key string, pageNum int64, columns ...string) ([]*entity.DeletedLinkedAccount, int64) {
 
 	var deletedLinkedAccounts []*entity.DeletedLinkedAccount
 	var whereStmt []string
 	var sqlValues []interface{}
+	var count float64
 
 	for _, column := range columns {
 		whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
 		sqlValues = append(sqlValues, key)
 	}
 
-	sqlValues = append(sqlValues, pageNum*30)
-	repo.conn.Raw("SELECT * FROM deleted_linked_accounts WHERE ("+strings.Join(whereStmt, "||")+") ORDER BY id ASC LIMIT ?, 30", sqlValues...).Scan(&deletedLinkedAccounts)
+	repo.conn.Raw("SELECT COUNT(*) FROM deleted_linked_accounts WHERE ("+strings.Join(whereStmt, "||")+")", sqlValues...).
+		Count(&count)
+	repo.conn.Raw("SELECT * FROM deleted_linked_accounts WHERE ("+strings.Join(whereStmt, "||")+")", sqlValues...).
+		Order("id ASC").Limit(30).Offset(pageNum * 30).Scan(&deletedLinkedAccounts)
 
-	return deletedLinkedAccounts
+	var pageCount int64 = int64(math.Ceil(count / 30.0))
+	return deletedLinkedAccounts, pageCount
 }
 
 // Update is a method that updates a certain deleted linked account value in the database

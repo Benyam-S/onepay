@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"regexp"
 
 	"github.com/Benyam-S/onepay/entity"
 	"github.com/Benyam-S/onepay/middleman"
@@ -62,7 +61,7 @@ func (handler *UserAPIHandler) HandleGetAccountInfo(w http.ResponseWriter, r *ht
 	}
 
 	accountInfo.AccountID = linkedAccount.AccountID
-	accountInfo.AccountProvider = linkedAccount.AccountProvider
+	accountInfo.AccountProviderID = linkedAccount.AccountProviderID
 
 	output, _ := tools.MarshalIndent(accountInfo, "", "\t", format)
 	w.WriteHeader(http.StatusOK)
@@ -83,22 +82,22 @@ func (handler *UserAPIHandler) HandleInitLinkAccount(w http.ResponseWriter, r *h
 
 	format := mux.Vars(r)["format"]
 	accountID := r.FormValue("account_id")
-	accountProvider := r.FormValue("account_provider")
-	emptyAccountID, _ := regexp.MatchString(`^\s*$`, accountID)
-	emptyAccountProvider, _ := regexp.MatchString(`^\s*$`, accountProvider)
+	accountProviderID := r.FormValue("account_provider_id")
 
-	if emptyAccountID || emptyAccountProvider {
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "empty values used"}, "", "\t", format)
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(output)
-		return
-	}
-
-	nonce, err := handler.app.AddLinkedAccount(opUser.UserID, accountID, accountProvider, handler.redisClient)
+	nonce, err := handler.app.AddLinkedAccount(opUser.UserID, accountID, accountProviderID, handler.redisClient)
 	if err != nil {
-		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(output)
+
+		// Whitelisting errors
+		// add the middleman errors later
+		if err.Error() == "account provider not found" ||
+			err.Error() == "account has already been linked to other onepay account" {
+			output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(output)
+			return
+		}
+
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
@@ -120,14 +119,19 @@ func (handler *UserAPIHandler) HandleFinishLinkAccount(w http.ResponseWriter, r 
 		return
 	}
 
+	format := mux.Vars(r)["format"]
 	otp := r.FormValue("otp")
 	nonce := r.FormValue("nonce")
 
-	err := handler.app.VerifyLinkedAccount(otp, nonce, handler.redisClient)
+	linkedAccount, err := handler.app.VerifyLinkedAccount(otp, nonce, handler.redisClient)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
+
+	output, _ := tools.MarshalIndent(linkedAccount, "", "\t", format)
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
 
 }
 

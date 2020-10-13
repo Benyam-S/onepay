@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/Benyam-S/onepay/entity"
@@ -65,21 +66,25 @@ func (repo *LinkedAccountRepository) Search(colunmName string, columnValue inter
 }
 
 // SearchMultiple is a method that search and returns a set of linked accounts from the database using an identifier.
-func (repo *LinkedAccountRepository) SearchMultiple(key string, pageNum int64, columns ...string) []*entity.LinkedAccount {
+func (repo *LinkedAccountRepository) SearchMultiple(key string, pageNum int64, columns ...string) ([]*entity.LinkedAccount, int64) {
 
 	var linkedAccounts []*entity.LinkedAccount
 	var whereStmt []string
 	var sqlValues []interface{}
+	var count float64
 
 	for _, column := range columns {
 		whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
 		sqlValues = append(sqlValues, key)
 	}
 
-	sqlValues = append(sqlValues, pageNum*30)
-	repo.conn.Raw("SELECT * FROM linked_accounts WHERE ("+strings.Join(whereStmt, "||")+") ORDER BY id ASC LIMIT ?, 30", sqlValues...).Scan(&linkedAccounts)
+	repo.conn.Raw("SELECT COUNT(*) FROM linked_accounts WHERE ("+strings.Join(whereStmt, "||")+")", sqlValues...).
+		Count(&count)
+	repo.conn.Raw("SELECT * FROM linked_accounts WHERE ("+strings.Join(whereStmt, "||")+")", sqlValues...).
+		Order("id ASC").Limit(30).Offset(pageNum * 30).Scan(&linkedAccounts)
 
-	return linkedAccounts
+	var pageCount int64 = int64(math.Ceil(count / 30.0))
+	return linkedAccounts, pageCount
 }
 
 // Update is a method that updates a certain linked account value in the database

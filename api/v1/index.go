@@ -152,17 +152,23 @@ func linkedAccountRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 	router.HandleFunc("/api/v1/oauth/user/linkedaccount/init.{format:json|xml}", tools.MiddlewareFactory(handler.HandleInitLinkAccount,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
 
-	router.HandleFunc("/api/v1/oauth/user/linkedaccount/finish", tools.MiddlewareFactory(handler.HandleFinishLinkAccount,
+	router.HandleFunc("/api/v1/oauth/user/linkedaccount/finish.{format:json|xml}", tools.MiddlewareFactory(handler.HandleFinishLinkAccount,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
 
 	router.HandleFunc("/api/v1/oauth/user/linkedaccount.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetUserLinkedAccounts,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
 
-	router.HandleFunc("/api/v1/oauth/user/linkedaccount/{id}.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetAccountInfo,
-		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
-
 	router.HandleFunc("/api/v1/oauth/user/linkedaccount.{format:json|xml}", tools.MiddlewareFactory(handler.HandleRemoveLinkedAccount,
 		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("DELETE")
+
+	router.HandleFunc("/api/v1/oauth/user/linkedaccount/accountinfo/{id}.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetAccountInfo,
+		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
+
+	router.HandleFunc("/api/v1/oauth/user/linkedaccount/accountprovider.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetAccountProviders,
+		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
+
+	router.HandleFunc("/api/v1/oauth/user/linkedaccount/accountprovider/{id}.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetAccountProvider,
+		handler.Authorization, handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
 
 }
 

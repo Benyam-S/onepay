@@ -71,11 +71,23 @@ type MoneyToken struct {
 
 // LinkedAccount is a type that defines an account that is linked with OnePay account
 type LinkedAccount struct {
-	ID              string `gorm:"primary_key; unique; not null"`
-	UserID          string `gorm:"not null"`
-	AccountProvider string `gorm:"not null"`
-	AccountID       string `gorm:"not null"`
-	AccessToken     string `gorm:"not null"`
+	ID                string `gorm:"primary_key; unique; not null"`
+	UserID            string `gorm:"not null"`
+	AccountProviderID string `gorm:"not null"`
+	AccountID         string `gorm:"not null"`
+	AccessToken       string `gorm:"not null"`
+}
+
+// AccountProvider is type that defines an external account provider
+type AccountProvider struct {
+	ID        string `gorm:"primary_key; unique; not null"`
+	Name      string `gorm:"not null"`
+	CreatedAt time.Time
+}
+
+// Extras is a type that defines values that are required but extra in definition
+type Extras struct {
+	TotalUsersCount int
 }
 
 // DeletedUser is a type that defines a OnePay user that has been deleted
@@ -91,11 +103,17 @@ type DeletedUser struct {
 // DeletedLinkedAccount is a type that defines an account that was linked with OnePay account
 // It can be used which account has been linked to which
 type DeletedLinkedAccount struct {
-	ID              string `gorm:"primary_key; unique; not null"`
-	UserID          string `gorm:"not null"`
-	AccountProvider string `gorm:"not null"`
-	AccountID       string `gorm:"not null"`
-	AccessToken     string `gorm:"not null"`
+	ID                string `gorm:"primary_key; unique; not null"`
+	UserID            string `gorm:"not null"`
+	AccountProviderID string `gorm:"not null"`
+	AccountID         string `gorm:"not null"`
+	AccessToken       string `gorm:"not null"`
+}
+
+// DeletedAccountProvider is a type that defines an account provider that has been a linked from OnePay System
+type DeletedAccountProvider struct {
+	ID   string `gorm:"primary_key; unique; not null"`
+	Name string `gorm:"not null"`
 }
 
 // FrozenUser is a struct that defines a user that has been frozen or deactivated
@@ -117,19 +135,20 @@ func (UserHistory) TableName() string {
 	return "user_history"
 }
 
-// LinkedAccountContainer is a struct that contains a filtered linked account without unnecessary values
-type LinkedAccountContainer struct {
-	ID              string
-	UserID          string
-	AccountID       string
-	AccountProvider string
-}
-
 // AccountInfo is type that defines an external account information
 type AccountInfo struct {
-	Amount          float64
-	AccountID       string
-	AccountProvider string
+	Amount            float64
+	AccountID         string
+	AccountProviderID string
+}
+
+// LinkedAccountContainer is a struct that contains a filtered linked account without unnecessary values
+type LinkedAccountContainer struct {
+	ID                  string
+	UserID              string
+	AccountID           string
+	AccountProviderName string
+	AccountProviderID   string
 }
 
 // Key is a type that defines a key type that can be used a key value in context

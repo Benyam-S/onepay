@@ -18,6 +18,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/Benyam-S/onepay/accountprovider"
 	"github.com/Benyam-S/onepay/client/http/session"
 	"github.com/Benyam-S/onepay/deleted"
 
@@ -37,6 +38,7 @@ type UserAPIHandler struct {
 	app                  *app.OnePay
 	uService             user.IService
 	dService             deleted.IService
+	apService            accountprovider.IService
 	redisClient          *redis.Client
 	upgrader             websocket.Upgrader
 	activeSocketChannels map[string][]chan interface{}
@@ -44,9 +46,9 @@ type UserAPIHandler struct {
 
 // NewUserAPIHandler is a function that returns a new user api handler
 func NewUserAPIHandler(commonApp *app.OnePay, userService user.IService, deletedService deleted.IService,
-	redisClient *redis.Client, upgrader websocket.Upgrader) *UserAPIHandler {
+	accountProviderService accountprovider.IService, redisClient *redis.Client, upgrader websocket.Upgrader) *UserAPIHandler {
 	return &UserAPIHandler{app: commonApp, uService: userService, dService: deletedService,
-		redisClient: redisClient, upgrader: upgrader}
+		apService: accountProviderService, redisClient: redisClient, upgrader: upgrader}
 }
 
 /* +++++++++++++++++++++++++++++++++++++++++++++ ADDING NEW USER +++++++++++++++++++++++++++++++++++++++++++++ */
@@ -564,8 +566,26 @@ func (handler *UserAPIHandler) HandleDeleteUser(w http.ResponseWriter, r *http.R
 
 	// Getting all the deleted linked accounts
 	linkedAccounts = handler.dService.SearchDeletedLinkedAccounts("user_id", opUser.UserID)
+	linkedAccountContainers := make([]*entity.LinkedAccountContainer, 0)
+	for _, linkedAccount := range linkedAccounts {
 
-	tempFile, err := app.ClosingFile(opUser, userHistories, linkedAccounts)
+		accountProvider, err := handler.apService.FindAccountProvider(linkedAccount.AccountProviderID)
+		accountProviderName := accountProvider.Name
+		if err != nil {
+			accountProviderName = "account provider has been removed"
+		}
+
+		linkedAccountContainer := new(entity.LinkedAccountContainer)
+		linkedAccountContainer.ID = linkedAccount.ID
+		linkedAccountContainer.UserID = linkedAccount.UserID
+		linkedAccountContainer.AccountID = linkedAccount.AccountID
+		linkedAccountContainer.AccountProviderID = linkedAccount.AccountProviderID
+		linkedAccountContainer.AccountProviderName = accountProviderName
+
+		linkedAccountContainers = append(linkedAccountContainers, linkedAccountContainer)
+	}
+
+	tempFile, err := app.ClosingFile(opUser, userHistories, linkedAccountContainers)
 
 	if err == nil {
 		wd, _ := os.Getwd()

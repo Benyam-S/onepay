@@ -53,7 +53,7 @@ func (service *Service) AddLinkedAccountToTrash(linkedAccount *entity.LinkedAcco
 	deletedLinkedAccount := new(entity.DeletedLinkedAccount)
 	deletedLinkedAccount.AccessToken = linkedAccount.AccessToken
 	deletedLinkedAccount.AccountID = linkedAccount.AccountID
-	deletedLinkedAccount.AccountProvider = linkedAccount.AccountProvider
+	deletedLinkedAccount.AccountProviderID = linkedAccount.AccountProviderID
 	deletedLinkedAccount.UserID = linkedAccount.UserID
 	deletedLinkedAccount.ID = fmt.Sprintf("deleted-%s:", tools.GenerateRandomString(4)) + linkedAccount.ID
 
@@ -170,7 +170,7 @@ func (service *Service) SearchDeletedLinkedAccounts(columnName, columnValue stri
 		linkedAccount := new(entity.LinkedAccount)
 		linkedAccount.AccessToken = deletedLinkedAccount.AccessToken
 		linkedAccount.AccountID = deletedLinkedAccount.AccountID
-		linkedAccount.AccountProvider = deletedLinkedAccount.AccountProvider
+		linkedAccount.AccountProviderID = deletedLinkedAccount.AccountProviderID
 		linkedAccount.UserID = deletedLinkedAccount.UserID
 		linkedAccount.ID = deletedLinkedAccount.ID
 		linkedAccounts = append(linkedAccounts, linkedAccount)
@@ -180,14 +180,13 @@ func (service *Service) SearchDeletedLinkedAccounts(columnName, columnValue stri
 }
 
 // SearchMultipleDeletedLinkedAccounts is a method that searchs and returns a set of deleted linked accounts related to the key identifier
-func (service *Service) SearchMultipleDeletedLinkedAccounts(key, pagination string, columns ...string) []*entity.DeletedLinkedAccount {
+func (service *Service) SearchMultipleDeletedLinkedAccounts(key string, pageNum int64, columns ...string) ([]*entity.DeletedLinkedAccount, int64) {
 
 	empty, _ := regexp.MatchString(`^\s*$`, key)
 	if empty {
-		return []*entity.DeletedLinkedAccount{}
+		return []*entity.DeletedLinkedAccount{}, 0
 	}
 
-	pageNum, _ := strconv.ParseInt(pagination, 0, 0)
 	return service.deletedLinkedAccountRepo.SearchMultiple(key, pageNum, columns...)
 }
 

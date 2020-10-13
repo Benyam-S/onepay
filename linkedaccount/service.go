@@ -8,7 +8,7 @@ type IService interface {
 	VerifyToLink(linkedAccount *entity.LinkedAccount) error
 	FindLinkedAccount(identifier string) (*entity.LinkedAccount, error)
 	SearchLinkedAccounts(columnName string, columnValue interface{}) []*entity.LinkedAccount
-	SearchMultipleLinkedAccounts(key, pagination string, columns ...string) []*entity.LinkedAccount
+	SearchMultipleLinkedAccounts(key string, pageNum int64, columns ...string) ([]*entity.LinkedAccount, int64)
 	UpdateLinkedAccount(linkedAccount *entity.LinkedAccount) error
 	UpdateLinkedAccountSingleValue(id, columnName string, columnValue interface{}) error
 	DeleteLinkedAccount(id string) (*entity.LinkedAccount, error)

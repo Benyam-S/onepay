@@ -12,7 +12,7 @@ type IService interface {
 	SearchDeletedUsers(key, pagination string, extra ...string) []*entity.DeletedUser
 	FindDeletedLinkedAccount(identifier string) (*entity.DeletedLinkedAccount, error)
 	SearchDeletedLinkedAccounts(columnName, columnValue string) []*entity.LinkedAccount
-	SearchMultipleDeletedLinkedAccounts(key, pagination string, columns ...string) []*entity.DeletedLinkedAccount
+	SearchMultipleDeletedLinkedAccounts(key string, pageNum int64, columns ...string) ([]*entity.DeletedLinkedAccount, int64)
 
 	FreezeUser(userID, reason string) error
 	UserIsFrozen(userID string) bool

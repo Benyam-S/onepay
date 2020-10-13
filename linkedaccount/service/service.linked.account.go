@@ -3,7 +3,6 @@ package service
 import (
 	"errors"
 	"regexp"
-	"strconv"
 
 	"github.com/Benyam-S/onepay/entity"
 	"github.com/Benyam-S/onepay/linkedaccount"
@@ -29,13 +28,13 @@ func (service *Service) AddLinkedAccount(newLinkedAccount *entity.LinkedAccount)
 	return nil
 }
 
-// VerifyToLink is a method that verifies if a certain account is ready to linked
+// VerifyToLink is a method that verifies if a certain account is ready to link
 // Incase if the database constraint doesn't work
 func (service *Service) VerifyToLink(linkedAccount *entity.LinkedAccount) error {
 
 	linkeAccounts := service.linkedAccountRepo.Search("account_id", linkedAccount.AccountID)
 	for _, account := range linkeAccounts {
-		if account.AccountProvider == linkedAccount.AccountProvider {
+		if account.AccountProviderID == linkedAccount.AccountProviderID {
 			return errors.New("account has been already linked to OnePay user")
 		}
 	}
@@ -65,14 +64,13 @@ func (service *Service) SearchLinkedAccounts(columnName string, columnValue inte
 }
 
 // SearchMultipleLinkedAccounts is a method that searchs and returns a set of linked accounts related to the key identifier
-func (service *Service) SearchMultipleLinkedAccounts(key, pagination string, columns ...string) []*entity.LinkedAccount {
+func (service *Service) SearchMultipleLinkedAccounts(key string, pageNum int64, columns ...string) ([]*entity.LinkedAccount, int64) {
 
 	empty, _ := regexp.MatchString(`^\s*$`, key)
 	if empty {
-		return []*entity.LinkedAccount{}
+		return []*entity.LinkedAccount{}, 0
 	}
 
-	pageNum, _ := strconv.ParseInt(pagination, 0, 0)
 	return service.linkedAccountRepo.SearchMultiple(key, pageNum, columns...)
 }
 

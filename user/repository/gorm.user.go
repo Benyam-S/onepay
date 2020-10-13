@@ -37,7 +37,7 @@ func (repo *UserRepository) Create(newOPUser *entity.User) error {
 	}
 
 	/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
-	repo.conn.Exec("UPDATE extras SET total_user_count = ?", totalNumOfUsers+1)
+	repo.conn.Exec("UPDATE extras SET total_users_count = ?", totalNumOfUsers+1)
 	/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 	return nil
@@ -176,12 +176,9 @@ func (repo *UserRepository) Delete(identifier string) (*entity.User, error) {
 
 // CountUsers is a method that counts the users in the database
 func (repo *UserRepository) CountUsers() int {
-	type countStruct struct {
-		TotalUserCount int `gorm:"total_user_count"`
-	}
-	var count = new(countStruct)
-	repo.conn.Raw("SELECT total_user_count FROM extras").Scan(count)
-	return count.TotalUserCount
+	extrasColumn := make([]int, 0)
+	repo.conn.Model(&entity.Extras{}).Pluck("total_users_count", &extrasColumn)
+	return extrasColumn[0]
 }
 
 // IsUnique is a method that determines whether a certain column value is unique in the user table
