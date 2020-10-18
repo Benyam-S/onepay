@@ -93,7 +93,7 @@ func (handler *UserAPIHandler) HandleInitAddUser(w http.ResponseWriter, r *http.
 	}
 
 	// msg := messageSMS["message_body"][0] + otp + ". " + messageSMS["message_body"][1]
-	// smsMessageID, err := tools.SendSMS(newOPUser.PhoneNumber, msg)
+	// smsMessageID, err := tools.SendSMS(tools.OnlyPhoneNumber(newOPUser.PhoneNumber), msg)
 
 	// if err != nil {
 	// 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -317,8 +317,8 @@ func (handler *UserAPIHandler) HandleGetPhoto(w http.ResponseWriter, r *http.Req
 
 /* +++++++++++++++++++++++++++++++++++++++++++++ UPDATING PROFILE +++++++++++++++++++++++++++++++++++++++++++++ */
 
-// HandleUpateProfile is a handler func that handles a request for updating user profile
-func (handler *UserAPIHandler) HandleUpateProfile(w http.ResponseWriter, r *http.Request) {
+// HandleUpdateBasicInfo is a handler func that handles a request for updating user's profile basic information
+func (handler *UserAPIHandler) HandleUpdateBasicInfo(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
@@ -332,8 +332,6 @@ func (handler *UserAPIHandler) HandleUpateProfile(w http.ResponseWriter, r *http
 
 	opUser.FirstName = r.FormValue("first_name")
 	opUser.LastName = r.FormValue("last_name")
-	opUser.Email = r.FormValue("email")
-	opUser.PhoneNumber = r.FormValue("phone_number")
 
 	errMap := handler.uService.ValidateUserProfile(opUser)
 
@@ -349,6 +347,237 @@ func (handler *UserAPIHandler) HandleUpateProfile(w http.ResponseWriter, r *http
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
+}
+
+// HandleInitUpdateEmail is a handler func that handles a request for updating user's email address
+func (handler *UserAPIHandler) HandleInitUpdateEmail(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
+
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	format := mux.Vars(r)["format"]
+	opUser.Email = r.FormValue("email")
+
+	errMap := handler.uService.ValidateUserProfile(opUser)
+
+	if errMap != nil && errMap["email"] != nil {
+		output, _ := tools.MarshalIndent(
+			ErrorBody{Error: errMap["email"].Error()}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	otp := tools.GenerateOTP()
+	emailNonce := uuid.Must(uuid.NewRandom())
+
+	wd, _ := os.Getwd()
+	dir := filepath.Join(wd, "./assets/messages", "/message.email.verification.json")
+	data, err1 := ioutil.ReadFile(dir)
+
+	var messageEmail map[string][]string
+	err2 := json.Unmarshal(data, &messageEmail)
+
+	if err1 != nil || err2 != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	verificationLink := fmt.Sprintf("http://%s:%s/api/v1/user/profile/email/verify?nonce=%s&otp=%s",
+		os.Getenv("domain_name"), os.Getenv("server_port"), emailNonce, otp)
+	msg := messageEmail["message_body"][0] + opUser.UserID +
+		messageEmail["message_body"][1] + verificationLink +
+		". " + messageEmail["message_body"][2]
+	err := tools.SendEmail(opUser.Email, "OnePay Email Verification", msg)
+
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	tempOutput, err1 := json.Marshal(opUser)
+	err2 = tools.SetValue(handler.redisClient, emailNonce.String(), otp, time.Hour*24)
+	err3 := tools.SetValue(handler.redisClient, otp+emailNonce.String(), string(tempOutput), time.Hour*24)
+	if err1 != nil || err2 != nil || err3 != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	// type NonceContainer struct {
+	// 	Nonce     string
+	// 	MessageID string
+	// }
+
+	// output, _ := tools.MarshalIndent(
+	// 	NonceContainer{Nonce: emailNonce.String(), MessageID: otp}, "", "\t", format)
+	// w.WriteHeader(http.StatusOK)
+	// w.Write(output)
+}
+
+// HandleVerifyUpdateEmail is a handler func that handle a request for verifying updateded email adderss
+func (handler *UserAPIHandler) HandleVerifyUpdateEmail(w http.ResponseWriter, r *http.Request) {
+	otp := r.FormValue("otp")
+	nonce := r.FormValue("nonce")
+	updatedUser := new(entity.User)
+
+	// Checking for empty value
+	if len(otp) == 0 || len(nonce) == 0 {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	storedOTP, err := tools.GetValue(handler.redisClient, nonce)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	if storedOTP != otp {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	tools.RemoveValues(handler.redisClient, nonce)
+
+	storedOPUser, err := tools.GetValue(handler.redisClient, otp+nonce)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	tools.RemoveValues(handler.redisClient, otp+nonce)
+
+	json.Unmarshal([]byte(storedOPUser), updatedUser)
+
+	err = handler.uService.UpdateUserSingleValue(updatedUser.UserID, "email", updatedUser.Email)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+}
+
+// HandleInitUpdatePhone is a handler func that handles a request for updating user's phone number
+func (handler *UserAPIHandler) HandleInitUpdatePhone(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
+
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	format := mux.Vars(r)["format"]
+	opUser.PhoneNumber = r.FormValue("phone_number")
+
+	errMap := handler.uService.ValidateUserProfile(opUser)
+
+	if errMap != nil && errMap["phone_number"] != nil {
+		output, _ := tools.MarshalIndent(
+			ErrorBody{Error: errMap["phone_number"].Error()}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	otp := tools.GenerateOTP()
+	smsNonce := uuid.Must(uuid.NewRandom())
+
+	wd, _ := os.Getwd()
+	dir := filepath.Join(wd, "./assets/messages", "/message.sms.verification.json")
+	data, err1 := ioutil.ReadFile(dir)
+
+	var messageSMS map[string][]string
+	err2 := json.Unmarshal(data, &messageSMS)
+
+	if err1 != nil || err2 != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	// msg := messageSMS["message_body"][0] + opUser.UserID +
+	// 	messageSMS["message_body"][1] + otp +
+	// 	". " + messageSMS["message_body"][2]
+	// smsMessageID, err := tools.SendSMS(tools.OnlyPhoneNumber(opUser.PhoneNumber, msg)
+
+	// if err != nil {
+	// 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	// 	return
+	// }
+
+	tempOutput, err1 := json.Marshal(opUser)
+	err2 = tools.SetValue(handler.redisClient, smsNonce.String(), otp, time.Hour*6)
+	err3 := tools.SetValue(handler.redisClient, otp+smsNonce.String(), string(tempOutput), time.Hour*6)
+	if err1 != nil || err2 != nil || err3 != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	type NonceContainer struct {
+		Nonce     string `json:"nonce"`
+		MessageID string `json:"message_id"`
+	}
+
+	output, _ := tools.MarshalIndent(
+		NonceContainer{Nonce: smsNonce.String(), MessageID: otp}, "", "\t", format)
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+}
+
+// HandleVerifyUpdatePhone is a handler func that handle a request for verifying updateded phone number
+func (handler *UserAPIHandler) HandleVerifyUpdatePhone(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	_, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
+
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	otp := r.FormValue("otp")
+	nonce := r.FormValue("nonce")
+	updatedUser := new(entity.User)
+
+	if len(otp) == 0 || len(nonce) == 0 {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	storedOTP, err := tools.GetValue(handler.redisClient, nonce)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	if storedOTP != otp {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	tools.RemoveValues(handler.redisClient, nonce)
+
+	storedOPUser, err := tools.GetValue(handler.redisClient, otp+nonce)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	tools.RemoveValues(handler.redisClient, otp+nonce)
+
+	json.Unmarshal([]byte(storedOPUser), updatedUser)
+
+	err = handler.uService.UpdateUserSingleValue(updatedUser.UserID, "phone_number", updatedUser.PhoneNumber)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
 }
 
 // HandleChangePassword is a handler func that handles a request for changing user passwords
@@ -803,7 +1032,7 @@ func (handler *UserAPIHandler) HandleInitForgotPassword(w http.ResponseWriter, r
 
 		restPath := os.Getenv("domain_name") + ":" + os.Getenv("server_port") + "/user/password/rest/finish/" + nonce.String()
 		msg := messageSMS["message_body"][0] + restPath + ". " + messageSMS["message_body"][1]
-		_, err := tools.SendSMS(opUser.PhoneNumber, msg)
+		_, err := tools.SendSMS(tools.OnlyPhoneNumber(opUser.PhoneNumber), msg)
 
 		if err != nil {
 			output, _ := tools.MarshalIndent(ErrorBody{Error: "unable to send message"}, "", "\t", format)

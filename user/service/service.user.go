@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -10,7 +11,9 @@ import (
 
 	"github.com/Benyam-S/onepay/linkedaccount"
 	"github.com/Benyam-S/onepay/moneytoken"
+	"github.com/Benyam-S/onepay/notifier"
 	"github.com/Benyam-S/onepay/wallet"
+	"github.com/nyaruka/phonenumbers"
 
 	"github.com/Benyam-S/onepay/entity"
 	"github.com/Benyam-S/onepay/tools"
@@ -27,14 +30,16 @@ type Service struct {
 	walletRepo        wallet.IWalletRepository
 	apiClientRepo     user.IAPIClientRepository
 	apiTokenRepo      user.IAPITokenRepository
+	notifier          *notifier.Notifier
 }
 
 // NewUserService is a function that returns a new user service
 func NewUserService(userRepository user.IUserRepository,
 	passwordRepository user.IPasswordRepository, sessionRepository user.ISessionRepository,
-	apiClientRepository user.IAPIClientRepository, apiTokenRepository user.IAPITokenRepository) user.IService {
+	apiClientRepository user.IAPIClientRepository, apiTokenRepository user.IAPITokenRepository,
+	profileChangeNotifier *notifier.Notifier) user.IService {
 	return &Service{userRepo: userRepository, passwordRepo: passwordRepository, sessionRepo: sessionRepository,
-		apiClientRepo: apiClientRepository, apiTokenRepo: apiTokenRepository}
+		apiClientRepo: apiClientRepository, apiTokenRepo: apiTokenRepository, notifier: profileChangeNotifier}
 }
 
 // AddUser is a method that adds a new OnePay user to the system along with the password
@@ -60,40 +65,60 @@ func (service *Service) AddUser(opUser *entity.User, opPassword *entity.UserPass
 func (service *Service) ValidateUserProfile(opUser *entity.User) entity.ErrMap {
 
 	errMap := make(map[string]error)
-	matchFirstName, _ := regexp.MatchString(`^[a-zA-Z]\w*$`, opUser.FirstName)
-	matchLastName, _ := regexp.MatchString(`^\w*$`, opUser.LastName)
-	matchEmail, _ := regexp.MatchString(`^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$`, opUser.Email)
-	matchPhoneNumber, _ := regexp.MatchString(`^(\+\d{11,12})$|(0\d{9})$`, opUser.PhoneNumber)
+	validFirstName, _ := regexp.MatchString(`^[a-zA-Z]\w*$`, opUser.FirstName)
+	validLastName, _ := regexp.MatchString(`^\w*$`, opUser.LastName)
+	validEmail, _ := regexp.MatchString(`^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$`, opUser.Email)
 
-	if !matchFirstName {
+	countryCode := tools.GetCountryCode(opUser.PhoneNumber)
+	phoneNumber := tools.OnlyPhoneNumber(opUser.PhoneNumber)
+
+	// Checking for local phone number
+	isLocalPhoneNumber, _ := regexp.MatchString(`^0\d{9}$`, phoneNumber)
+	if isLocalPhoneNumber && (countryCode == "" || countryCode == "ET") {
+		phoneNumberSlice := strings.Split(phoneNumber, "")
+		if phoneNumberSlice[0] == "0" {
+			phoneNumberSlice = phoneNumberSlice[1:]
+			internationalPhoneNumber := "+251" + strings.Join(phoneNumberSlice, "")
+			phoneNumber = internationalPhoneNumber
+			countryCode = "ET"
+		}
+	}
+
+	parsedPhoneNumber, _ := phonenumbers.Parse(phoneNumber, "")
+	validPhoneNumber := phonenumbers.IsValidNumber(parsedPhoneNumber)
+
+	if !validFirstName {
 		errMap["first_name"] = errors.New("firstname should only contain alpha numerical values and have at least one character")
 	}
-	if !matchLastName {
+	if !validLastName {
 		errMap["last_name"] = errors.New("lastname should only contain alpha numerical values")
 	}
-	if !matchEmail {
+	if !validEmail {
 		errMap["email"] = errors.New("invalid email address used")
 	}
 
-	if !matchPhoneNumber {
-		errMap["phone_number"] = errors.New("phonenumber should be +XXXXXXXXXXXX or 0XXXXXXXXX formate")
+	if !validPhoneNumber {
+		errMap["phone_number"] = errors.New("invalid phonenumber used")
 	} else {
 		// If a valid phone number is provided, adjust the phone number to fit the database
-		phoneNumberSlice := strings.Split(opUser.PhoneNumber, "")
-		if phoneNumberSlice[0] == "0" {
-			phoneNumberSlice = phoneNumberSlice[1:]
-			validPhoneNumber := "+251" + strings.Join(phoneNumberSlice, "")
-			opUser.PhoneNumber = validPhoneNumber
+		// Stored in +251900010197[ET] or +251900010197 format
+		phoneNumber = fmt.Sprintf("+%d%d", parsedPhoneNumber.GetCountryCode(),
+			parsedPhoneNumber.GetNationalNumber())
+
+		opUser.PhoneNumber = phoneNumber
+		if countryCode != "" {
+			opUser.PhoneNumber = fmt.Sprintf("%s[%s]", phoneNumber, countryCode)
 		}
 	}
 
 	// Meaning a new user is being add
 	if opUser.UserID == "" {
-		if matchEmail && !service.userRepo.IsUnique("email", opUser.Email) {
+		if validEmail && !service.userRepo.IsUnique("email", opUser.Email) {
 			errMap["email"] = errors.New("email address already exists")
 		}
 
-		if matchPhoneNumber && !service.userRepo.IsUnique("phone_number", opUser.PhoneNumber) {
+		phoneNumberPattern := `^` + tools.EscapeRegexpForDatabase(phoneNumber) + `(\\[[a-zA-Z]{2}])?$`
+		if validPhoneNumber && !service.userRepo.IsUniqueRexp("phone_number", phoneNumberPattern) {
 			errMap["phone_number"] = errors.New("phone number already exists")
 		}
 	} else {
@@ -101,14 +126,16 @@ func (service *Service) ValidateUserProfile(opUser *entity.User) entity.ErrMap {
 		prevProfile, _ := service.userRepo.Find(opUser.UserID)
 
 		// checking uniquness only for email that isn't identical to the user's previous email
-		if matchEmail && prevProfile.Email != opUser.Email {
+		if validEmail && prevProfile.Email != opUser.Email {
 			if !service.userRepo.IsUnique("email", opUser.Email) {
 				errMap["email"] = errors.New("email address already exists")
 			}
 		}
 
-		if matchPhoneNumber && prevProfile.PhoneNumber != opUser.PhoneNumber {
-			if !service.userRepo.IsUnique("phone_number", opUser.PhoneNumber) {
+		if validPhoneNumber &&
+			tools.OnlyPhoneNumber(prevProfile.PhoneNumber) != tools.OnlyPhoneNumber(opUser.PhoneNumber) {
+			phoneNumberPattern := `^` + tools.EscapeRegexpForDatabase(phoneNumber) + `(\\[[a-zA-Z]{2}])?$`
+			if !service.userRepo.IsUniqueRexp("phone_number", phoneNumberPattern) {
 				errMap["phone_number"] = errors.New("phone number already exists")
 			}
 		}
@@ -187,6 +214,11 @@ func (service *Service) UpdateUser(opUser *entity.User) error {
 	if err != nil {
 		return errors.New("unable to update user")
 	}
+
+	/* ++++++++++++++ NOTIFYING CHANGE +++++++++++++++ */
+	service.notifier.NotifyProfileChange(opUser.UserID)
+	/* +++++++++++++++++++++++++++++++++++++++++++++++ */
+
 	return nil
 }
 
@@ -198,6 +230,11 @@ func (service *Service) UpdateUserSingleValue(userID, columnName string, columnV
 	if err != nil {
 		return errors.New("unable to update user")
 	}
+
+	/* ++++++++++++++ NOTIFYING CHANGE +++++++++++++++ */
+	service.notifier.NotifyProfileChange(userID)
+	/* +++++++++++++++++++++++++++++++++++++++++++++++ */
+
 	return nil
 }
 

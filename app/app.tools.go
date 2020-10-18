@@ -81,7 +81,7 @@ func ClosingFile(opUser *entity.User, histories []*entity.UserHistory,
 	}
 
 	line := "First Name: " + opUser.FirstName + "	\nLast Name: " + opUser.LastName +
-		" \nEmail: " + opUser.Email + " \nPHONE NUMBER: " + opUser.PhoneNumber
+		" \nEmail: " + opUser.Email + " \nPHONE NUMBER: " + tools.OnlyPhoneNumber(opUser.PhoneNumber)
 
 	_, err = file.WriteString(line)
 	if err != nil {

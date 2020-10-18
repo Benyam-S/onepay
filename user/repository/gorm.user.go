@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Benyam-S/onepay/entity"
+	"github.com/Benyam-S/onepay/tools"
 	"github.com/Benyam-S/onepay/user"
 	"github.com/jinzhu/gorm"
 )
@@ -52,11 +53,11 @@ func (repo *UserRepository) Find(identifier string) (*entity.User, error) {
 	if splitedIdentifier[0] == "0" {
 		modifiedIdentifier = "+251" + strings.Join(splitedIdentifier[1:], "")
 	}
+	modifiedIdentifier = `^` + tools.EscapeRegexpForDatabase(modifiedIdentifier) + `(\\[[a-zA-Z]{2}])?$`
 
 	opUser := new(entity.User)
-	err := repo.conn.Model(opUser).
-		Where("user_id = ? || email = ? || phone_number = ?", identifier, identifier, modifiedIdentifier).
-		First(opUser).Error
+	err := repo.conn.Model(opUser).Where("user_id = ? || email = ? || phone_number REGEXP '"+
+		modifiedIdentifier+"'", identifier, identifier).First(opUser).Error
 
 	if err != nil {
 		return nil, err
@@ -98,13 +99,14 @@ func (repo *UserRepository) Search(key string, pageNum int64, columns ...string)
 	for _, column := range columns {
 		// modifing the key so that it can match the database phone number values
 		if column == "phone_number" {
+			modifiedKey := key
 			splitedKey := strings.Split(key, "")
 			if splitedKey[0] == "0" {
-				modifiedKey := "+251" + strings.Join(splitedKey[1:], "")
-				whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
-				sqlValues = append(sqlValues, modifiedKey)
-				continue
+				modifiedKey = "+251" + strings.Join(splitedKey[1:], "")
 			}
+			modifiedKey = `^` + tools.EscapeRegexpForDatabase(modifiedKey) + `(\\[[a-zA-Z]{2}])?$`
+			whereStmt = append(whereStmt, fmt.Sprintf(" %s REGEXP '"+modifiedKey+"' ", column))
+			continue
 		}
 		whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
 		sqlValues = append(sqlValues, key)
@@ -123,7 +125,7 @@ func (repo *UserRepository) SearchWRegx(key string, pageNum int64, columns ...st
 	var sqlValues []interface{}
 
 	for _, column := range columns {
-		whereStmt = append(whereStmt, fmt.Sprintf(" %s regexp ? ", column))
+		whereStmt = append(whereStmt, fmt.Sprintf(" %s REGEXP ? ", column))
 		sqlValues = append(sqlValues, "^"+regexp.QuoteMeta(key))
 	}
 
@@ -185,5 +187,13 @@ func (repo *UserRepository) CountUsers() int {
 func (repo *UserRepository) IsUnique(columnName string, columnValue interface{}) bool {
 	var totalCount int
 	repo.conn.Model(&entity.User{}).Where(columnName+"=?", columnValue).Count(&totalCount)
+	return 0 >= totalCount
+}
+
+// IsUniqueRexp is a method that determines whether a certain column value pattern is unique in the user table
+func (repo *UserRepository) IsUniqueRexp(columnName string, columnPattern string) bool {
+	var totalCount int
+	repo.conn.Raw("SELECT COUNT(*) FROM users WHERE " + columnName +
+		" REGEXP '" + columnPattern + "'").Count(&totalCount)
 	return 0 >= totalCount
 }

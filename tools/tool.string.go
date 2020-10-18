@@ -92,3 +92,28 @@ func IDWOutPrefix(id string) string {
 
 	return output
 }
+
+// EscapeRegexpForDatabase is a function that escape the regular experssion value to fit the database,
+// Since the database uses double backslash as escape character
+func EscapeRegexpForDatabase(unEscaped string) string {
+	escapedString := ""
+	partiallyEscaped := regexp.QuoteMeta(unEscaped)
+	for index := 0; index < len(partiallyEscaped); index++ {
+		if partiallyEscaped[index] == 92 &&
+			index+1 < len(partiallyEscaped) && partiallyEscaped[index+1] != 92 {
+			escapedString += `\\`
+			continue
+		}
+
+		if partiallyEscaped[index] == 92 &&
+			index+1 < len(partiallyEscaped) && partiallyEscaped[index+1] == 92 {
+			escapedString += `\\\`
+			index++
+			continue
+		}
+
+		escapedString += string(partiallyEscaped[index])
+	}
+
+	return escapedString
+}

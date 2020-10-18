@@ -134,7 +134,8 @@ func initServer() {
 	changeNotifier := notifier.NewNotifier(sysConfig.ListenerURI)
 	/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-	userService := urService.NewUserService(userRepo, passwordRepo, sessionRepo, apiClientRepo, apiTokenRepo)
+	userService := urService.NewUserService(userRepo, passwordRepo,
+		sessionRepo, apiClientRepo, apiTokenRepo, changeNotifier)
 	deletedService := delService.NewDeletedService(deletedUserRepo, deletedLinkedAccountRepo,
 		frozenUserRepo, frozenClientRepo)
 	walletService := walService.NewWalletService(walletRepo, changeNotifier)

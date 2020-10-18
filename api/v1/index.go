@@ -38,8 +38,23 @@ func userRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 	router.HandleFunc("/api/v1/oauth/user/profile.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetProfile, handler.Authorization,
 		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
 
-	router.HandleFunc("/api/v1/oauth/user/profile.{format:json|xml}", tools.MiddlewareFactory(handler.HandleUpateProfile, handler.Authorization,
+	// router.HandleFunc("/api/v1/oauth/user/profile.{format:json|xml}", tools.MiddlewareFactory(handler.HandleUpdateProfile, handler.Authorization,
+	// 	handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
+
+	router.HandleFunc("/api/v1/oauth/user/profile.{format:json|xml}", tools.MiddlewareFactory(handler.HandleUpdateBasicInfo, handler.Authorization,
 		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
+
+	router.HandleFunc("/api/v1/oauth/user/profile/phonenumber.{format:json|xml}", tools.MiddlewareFactory(handler.HandleInitUpdatePhone, handler.Authorization,
+		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
+
+	router.HandleFunc("/api/v1/oauth/user/profile/phonenumber/verify", tools.MiddlewareFactory(handler.HandleVerifyUpdatePhone, handler.Authorization,
+		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
+
+	router.HandleFunc("/api/v1/oauth/user/profile/email.{format:json|xml}", tools.MiddlewareFactory(handler.HandleInitUpdateEmail, handler.Authorization,
+		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
+
+	// Since we are using link for verifying the method should be get and also it doesn't use Oauth
+	router.HandleFunc("/api/v1/user/profile/email/verify", handler.HandleVerifyUpdateEmail).Methods("GET")
 
 	router.HandleFunc("/api/v1/oauth/user/{user_id}/profile/pic", handler.HandleGetPhoto).Methods("GET")
 
@@ -193,6 +208,8 @@ func websocketRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 
 	router.HandleFunc("/api/v1/connect.{format:json|xml}/{api_key}/{access_token}", tools.MiddlewareFactory(handler.HandleCreateWebsocket,
 		handler.Authorization, handler.WebsocketAccessTokenAuthentication))
+
+	router.HandleFunc("/api/v1/listener/profile", handler.HandleListenToProfileChange).Methods("PUT")
 
 	router.HandleFunc("/api/v1/listener/wallet", handler.HandleListenToWalletChange).Methods("PUT")
 

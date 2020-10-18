@@ -72,7 +72,7 @@ func (handler *UserHandler) HandleInitAddUser(w http.ResponseWriter, r *http.Req
 	}
 
 	msg := messageSMS["message_body"][0] + otp + ". " + messageSMS["message_body"][1]
-	smsMessageID, err := tools.SendSMS(newOPUser.PhoneNumber, msg)
+	smsMessageID, err := tools.SendSMS(tools.OnlyPhoneNumber(newOPUser.PhoneNumber), msg)
 
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
