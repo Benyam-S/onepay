@@ -12,6 +12,7 @@ import (
 type IService interface {
 	AddUser(opUser *entity.User, opPassword *entity.UserPassword) error
 	FindUser(identifier string) (*entity.User, error)
+	FindUserAlsoWPhone(identifier string, lb *entity.LocalizationBag) (*entity.User, error)
 	SearchUsers(key, pagination string, extra ...string) []*entity.User
 	AllUsers(pagination string) []*entity.User
 	ValidateUserProfile(opUser *entity.User) entity.ErrMap

@@ -971,7 +971,10 @@ func (handler *UserAPIHandler) HandleInitForgotPassword(w http.ResponseWriter, r
 	method := r.FormValue("method")
 	identifier := r.FormValue("identifier")
 
-	opUser, err := handler.uService.FindUser(identifier)
+	// Get localization data from IP Geo location
+	lb := new(entity.LocalizationBag)
+
+	opUser, err := handler.uService.FindUserAlsoWPhone(identifier, lb)
 	if err != nil {
 		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid identifier used"}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)

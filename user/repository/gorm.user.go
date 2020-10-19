@@ -45,19 +45,27 @@ func (repo *UserRepository) Create(newOPUser *entity.User) error {
 }
 
 // Find is a method that finds a certain user from the database using an identifier,
-// also Find() uses user_id, email, phone_number as a key for selection
+// also Find() uses user_id and email as a key for selection
 func (repo *UserRepository) Find(identifier string) (*entity.User, error) {
+	opUser := new(entity.User)
 
-	modifiedIdentifier := identifier
-	splitedIdentifier := strings.Split(identifier, "")
-	if splitedIdentifier[0] == "0" {
-		modifiedIdentifier = "+251" + strings.Join(splitedIdentifier[1:], "")
+	err := repo.conn.Model(opUser).Where("user_id = ? || email = ?",
+		identifier, identifier).First(opUser).Error
+
+	if err != nil {
+		return nil, err
 	}
-	modifiedIdentifier = `^` + tools.EscapeRegexpForDatabase(modifiedIdentifier) + `(\\[[a-zA-Z]{2}])?$`
+	return opUser, nil
+}
+
+// FindAlsoWPhone is a method that finds a certain user from the database using an identifier,
+// also FindAlsoWPhone() uses user_id, email and phone_number as a key for selection
+func (repo *UserRepository) FindAlsoWPhone(identifier, phoneNumber string) (*entity.User, error) {
+	phoneNumber = `^` + tools.EscapeRegexpForDatabase(phoneNumber) + `(\\[[a-zA-Z]{2}])?$`
 
 	opUser := new(entity.User)
 	err := repo.conn.Model(opUser).Where("user_id = ? || email = ? || phone_number REGEXP '"+
-		modifiedIdentifier+"'", identifier, identifier).First(opUser).Error
+		phoneNumber+"'", identifier, identifier).First(opUser).Error
 
 	if err != nil {
 		return nil, err
@@ -101,7 +109,7 @@ func (repo *UserRepository) Search(key string, pageNum int64, columns ...string)
 		if column == "phone_number" {
 			modifiedKey := key
 			splitedKey := strings.Split(key, "")
-			if splitedKey[0] == "0" {
+			if splitedKey[0] == "0" && len(splitedKey) == 10 {
 				modifiedKey = "+251" + strings.Join(splitedKey[1:], "")
 			}
 			modifiedKey = `^` + tools.EscapeRegexpForDatabase(modifiedKey) + `(\\[[a-zA-Z]{2}])?$`

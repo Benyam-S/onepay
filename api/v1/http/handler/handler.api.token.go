@@ -25,8 +25,11 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 	identifier := r.FormValue("identifier")
 	password := r.FormValue("password")
 
+	// Get localization data from IP Geo location
+	lb := new(entity.LocalizationBag)
+
 	// Checking if the user exists
-	opUser, err := handler.uService.FindUser(identifier)
+	opUser, err := handler.uService.FindUserAlsoWPhone(identifier, lb)
 	if err != nil {
 		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.InvalidPasswordOrIdentifierError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
@@ -301,8 +304,11 @@ func (handler *UserAPIHandler) HandleInitAuthorization(w http.ResponseWriter, r 
 		return
 	}
 
+	// Get localization data from IP Geo location
+	lb := new(entity.LocalizationBag)
+
 	// Checking if the user exists
-	opUser, err := handler.uService.FindUser(identifier)
+	opUser, err := handler.uService.FindUserAlsoWPhone(identifier, lb)
 	if err != nil {
 		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.InvalidPasswordOrIdentifierError}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)

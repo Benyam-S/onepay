@@ -163,6 +163,41 @@ func (service *Service) FindUser(identifier string) (*entity.User, error) {
 	return opUser, nil
 }
 
+// FindUserAlsoWPhone is a method that find and return a user that matchs the identifier value,
+// Also it uses the identifier as a phone number
+func (service *Service) FindUserAlsoWPhone(identifier string, lb *entity.LocalizationBag) (*entity.User, error) {
+
+	empty, _ := regexp.MatchString(`^\s*$`, identifier)
+	if empty {
+		return nil, errors.New("empty identifier used")
+	}
+
+	phoneNumber := tools.OnlyPhoneNumber(identifier)
+	if lb.PhoneCode != "" && !strings.HasPrefix(phoneNumber, "+") {
+		phoneNumber = "+" + lb.PhoneCode + phoneNumber
+		parsedPhoneNumber, _ := phonenumbers.Parse(phoneNumber, "")
+		validPhoneNumber := phonenumbers.IsValidNumber(parsedPhoneNumber)
+		if validPhoneNumber {
+			phoneNumber = fmt.Sprintf("+%d%d", parsedPhoneNumber.GetCountryCode(),
+				parsedPhoneNumber.GetNationalNumber())
+		} else {
+			phoneNumber = tools.OnlyPhoneNumber(identifier)
+		}
+	} else {
+		// Localizing phone number
+		splitedIdentifier := strings.Split(identifier, "")
+		if splitedIdentifier[0] == "0" && len(splitedIdentifier) == 10 {
+			phoneNumber = "+251" + strings.Join(splitedIdentifier[1:], "")
+		}
+	}
+
+	opUser, err := service.userRepo.FindAlsoWPhone(identifier, phoneNumber)
+	if err != nil {
+		return nil, errors.New("no user found")
+	}
+	return opUser, nil
+}
+
 // AllUsers is a method that returns all the users with pagination
 func (service *Service) AllUsers(pagination string) []*entity.User {
 	pageNum, _ := strconv.ParseInt(pagination, 0, 0)

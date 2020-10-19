@@ -151,6 +151,12 @@ type LinkedAccountContainer struct {
 	AccountProviderID   string
 }
 
+// LocalizationBag is a struct that contains localization values
+type LocalizationBag struct {
+	CountryCode string
+	PhoneCode   string
+}
+
 // Key is a type that defines a key type that can be used a key value in context
 type Key string
 

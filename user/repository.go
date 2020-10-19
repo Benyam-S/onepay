@@ -10,6 +10,7 @@ import (
 type IUserRepository interface {
 	Create(newOPUser *entity.User) error
 	Find(identifier string) (*entity.User, error)
+	FindAlsoWPhone(identifier, phoneNumber string) (*entity.User, error)
 	Search(key string, pageNum int64, columns ...string) []*entity.User
 	SearchWRegx(key string, pageNum int64, columns ...string) []*entity.User
 	All(pageNum int64) []*entity.User
