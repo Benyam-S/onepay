@@ -54,7 +54,8 @@ func (handler *UserAPIHandler) HandleRefreshMoneyTokens(w http.ResponseWriter, r
 	codes := make([]string, 0)
 	empty, _ := regexp.MatchString(`^\s*$`, codesString)
 	if !empty {
-		codes = strings.Split(strings.TrimSpace(codesString), " ")
+		reg := regexp.MustCompile(`\s+`)
+		codes = reg.Split(strings.TrimSpace(codesString), -1)
 	}
 
 	for _, code := range codes {
@@ -113,7 +114,8 @@ func (handler *UserAPIHandler) HandleReclaimMoneyTokens(w http.ResponseWriter, r
 	codes := make([]string, 0)
 	empty, _ := regexp.MatchString(`^\s*$`, codesString)
 	if !empty {
-		codes = strings.Split(strings.TrimSpace(codesString), " ")
+		reg := regexp.MustCompile(`\s+`)
+		codes = reg.Split(strings.TrimSpace(codesString), -1)
 	}
 
 	for _, code := range codes {
@@ -155,7 +157,8 @@ func (handler *UserAPIHandler) HandleRemoveMoneyTokens(w http.ResponseWriter, r 
 	codes := make([]string, 0)
 	empty, _ := regexp.MatchString(`^\s*$`, codesString)
 	if !empty {
-		codes = strings.Split(strings.TrimSpace(codesString), " ")
+		reg := regexp.MustCompile(`\s+`)
+		codes = reg.Split(strings.TrimSpace(codesString), -1)
 	}
 
 	for _, code := range codes {

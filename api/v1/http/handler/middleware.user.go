@@ -34,6 +34,7 @@ func (handler *UserAPIHandler) AccessTokenAuthentication(next http.HandlerFunc) 
 			return
 		}
 
+		// No need for deactivating expired api tokens
 		if handler.uService.ValidateAPIToken(apiToken) != nil {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 			return
@@ -111,6 +112,9 @@ func (handler *UserAPIHandler) Authorization(next http.HandlerFunc) http.Handler
 		r = r.Clone(ctx)
 
 		// updating the api token for better user experience
+		ipAddress, _ := tools.GetIP(r)
+		apiToken.DeviceInfo = r.UserAgent()
+		apiToken.IPAddress = ipAddress
 		apiToken.ExpiresAt = time.Now().Add(time.Hour * 240).Unix()
 		handler.uService.UpdateAPIToken(apiToken)
 
@@ -147,7 +151,7 @@ func (handler *UserAPIHandler) AuthenticateScope(next http.HandlerFunc) http.Han
 		}
 
 		if !scopeFlage {
-			http.Error(w, "token scope is unathorized for the request", http.StatusForbidden)
+			http.Error(w, "token scope is unauthorized for the request", http.StatusForbidden)
 			return
 		}
 

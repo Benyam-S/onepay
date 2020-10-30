@@ -6,6 +6,9 @@ const RoleStaff = "Staff"
 // RoleAdmin is a constant that defines a admin role for a staff member table
 const RoleAdmin = "Admin"
 
+// ClientTypeWeb is a constant for web client type
+const ClientTypeWeb = "Web"
+
 // APIClientTypeInternal is a constant for internal type api client
 const APIClientTypeInternal = "Internal"
 

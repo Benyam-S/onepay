@@ -72,7 +72,7 @@ func userRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 	router.HandleFunc("/api/v1/oauth/user/session.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetActiveSessions, handler.Authorization,
 		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
 
-	router.HandleFunc("/api/v1/oauth/user/session", tools.MiddlewareFactory(handler.HandleDeactivateSession, handler.Authorization,
+	router.HandleFunc("/api/v1/oauth/user/session.{format:json|xml}", tools.MiddlewareFactory(handler.HandleDeactivateSessions, handler.Authorization,
 		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
 
 	/* ++++++++++++++++++++++++++++++++++++++++++++ FORGOT PASSWORD +++++++++++++++++++++++++++++++++++++++++++ */

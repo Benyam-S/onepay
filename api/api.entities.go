@@ -29,6 +29,8 @@ type Token struct {
 	Scopes          string `gorm:"not null"`
 	ExpiresAt       int64  `gorm:"not null"`
 	DailyExpiration int64  `gorm:"not null"`
+	IPAddress       string `gorm:"not null"`
+	DeviceInfo      string `gorm:"not null"`
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	Deactivated     bool `gorm:"not null"` // This can be used to identify a session that has been logged out
@@ -63,8 +65,8 @@ func (apiToken Token) GetScopes() []string {
 	}
 
 	unfilteredScopes := strings.Split(scopesString, ",")
-	for _, unfileredScope := range unfilteredScopes {
-		scopes = append(scopes, strings.TrimSpace(unfileredScope))
+	for _, unfilteredScope := range unfilteredScopes {
+		scopes = append(scopes, strings.TrimSpace(unfilteredScope))
 	}
 
 	return scopes

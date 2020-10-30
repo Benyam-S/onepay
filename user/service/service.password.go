@@ -39,7 +39,7 @@ func (service *Service) VerifyUserPassword(opPassword *entity.UserPassword, veri
 	}
 
 	if opPassword.Password != verifyPassword {
-		return errors.New("password does not match")
+		return errors.New("passwords do not match")
 	}
 
 	opPassword.Salt = tools.GenerateRandomString(30)
@@ -49,7 +49,7 @@ func (service *Service) VerifyUserPassword(opPassword *entity.UserPassword, veri
 	return nil
 }
 
-// UpdatePassword is a method that updates a certain's user password
+// UpdatePassword is a method that updates a certain user's password
 func (service *Service) UpdatePassword(opPassword *entity.UserPassword) error {
 
 	err := service.passwordRepo.Update(opPassword)
@@ -59,7 +59,7 @@ func (service *Service) UpdatePassword(opPassword *entity.UserPassword) error {
 	return nil
 }
 
-// DeletePassword is a method that deletes a certain's user password
+// DeletePassword is a method that deletes a certain user's password
 func (service *Service) DeletePassword(identifier string) (*entity.UserPassword, error) {
 
 	opPassword, err := service.passwordRepo.Delete(identifier)

@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -76,7 +78,7 @@ func (handler *UserAPIHandler) HandleInitAddUser(w http.ResponseWriter, r *http.
 
 	// Generating OTP code
 	otp := tools.GenerateOTP()
-	// Generating unique key for identifing the OTP token
+	// Generating unique key for identifying the OTP token
 	smsNonce := uuid.Must(uuid.NewRandom())
 
 	// Reading message body from our asset folder
@@ -180,7 +182,7 @@ func (handler *UserAPIHandler) HandleFinishAddUser(w http.ResponseWriter, r *htt
 	// Removing key value pair from the redis store
 	tools.RemoveValues(handler.redisClient, nonce)
 
-	// unmarshaling user data
+	// unMarshaling user data
 	json.Unmarshal([]byte(storedOPUser), newOPUser)
 
 	err = handler.uService.AddUser(newOPUser, newOPPassword)
@@ -419,7 +421,7 @@ func (handler *UserAPIHandler) HandleInitUpdateEmail(w http.ResponseWriter, r *h
 	// w.Write(output)
 }
 
-// HandleVerifyUpdateEmail is a handler func that handle a request for verifying updateded email adderss
+// HandleVerifyUpdateEmail is a handler func that handle a request for verifying updated email address
 func (handler *UserAPIHandler) HandleVerifyUpdateEmail(w http.ResponseWriter, r *http.Request) {
 	otp := r.FormValue("otp")
 	nonce := r.FormValue("nonce")
@@ -530,7 +532,7 @@ func (handler *UserAPIHandler) HandleInitUpdatePhone(w http.ResponseWriter, r *h
 	w.Write(output)
 }
 
-// HandleVerifyUpdatePhone is a handler func that handle a request for verifying updateded phone number
+// HandleVerifyUpdatePhone is a handler func that handle a request for verifying updated phone number
 func (handler *UserAPIHandler) HandleVerifyUpdatePhone(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	_, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
@@ -609,6 +611,14 @@ func (handler *UserAPIHandler) HandleChangePassword(w http.ResponseWriter, r *ht
 	err = bcrypt.CompareHashAndPassword(hasedPassword, []byte(oldPassword+opPassword.Salt))
 	if err != nil {
 		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid old password used"}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	if newPassword == oldPassword {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "new password is identical with the old password"},
+			"", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
@@ -739,10 +749,18 @@ func (handler *UserAPIHandler) HandleDeleteUser(w http.ResponseWriter, r *http.R
 
 	password := r.FormValue("password")
 
+	// checking for false attempts
+	falseAttempts, _ := tools.GetValue(handler.redisClient, entity.PasswordFault+opUser.UserID)
+	attempts, _ := strconv.ParseInt(falseAttempts, 0, 64)
+	if attempts >= 5 {
+		http.Error(w, entity.TooManyAttemptsError, http.StatusBadRequest)
+		return
+	}
+
 	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
 	opPassword, err := handler.uService.FindPassword(opUser.UserID)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, entity.InvalidPasswordError, http.StatusBadRequest)
 		return
 	}
 
@@ -750,9 +768,16 @@ func (handler *UserAPIHandler) HandleDeleteUser(w http.ResponseWriter, r *http.R
 	hasedPassword, _ := base64.StdEncoding.DecodeString(opPassword.Password)
 	err = bcrypt.CompareHashAndPassword(hasedPassword, []byte(password+opPassword.Salt))
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		// registering fault
+		tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
+			fmt.Sprintf("%d", attempts+1), time.Hour*24)
+
+		http.Error(w, entity.InvalidPasswordError, http.StatusBadRequest)
 		return
 	}
+
+	// clearing user's false attempts
+	tools.RemoveValues(handler.redisClient, entity.PasswordFault+opUser.UserID)
 
 	userHistories, linkedAccounts, err := handler.app.InitDeleteOnePayAccount(opUser.UserID)
 	if err != nil {
@@ -867,10 +892,11 @@ func (handler *UserAPIHandler) HandleGetActiveSessions(w http.ResponseWriter, r 
 
 	type SessionContainer struct {
 		ID         string
-		CreatedAt  int64
-		UdatedAt   int64
+		CreatedAt  time.Time
+		UpdatedAt  time.Time
 		DeviceInfo string
 		IPAddress  string
+		Type       string
 	}
 
 	sessionContainers := make([]*SessionContainer, 0)
@@ -883,10 +909,11 @@ func (handler *UserAPIHandler) HandleGetActiveSessions(w http.ResponseWriter, r 
 	for _, session := range sessions {
 		if !session.Deactivated {
 			sessionContainer := new(SessionContainer)
-			sessionContainer.CreatedAt = session.CreatedAt.Unix()
-			sessionContainer.UdatedAt = session.UpdatedAt.Unix()
+			sessionContainer.CreatedAt = session.CreatedAt
+			sessionContainer.UpdatedAt = session.UpdatedAt
 			sessionContainer.DeviceInfo = session.DeviceInfo
 			sessionContainer.IPAddress = session.IPAddress
+			sessionContainer.Type = entity.ClientTypeWeb
 			sessionContainer.ID = session.SessionID
 
 			sessionContainers = append(sessionContainers, sessionContainer)
@@ -901,12 +928,20 @@ func (handler *UserAPIHandler) HandleGetActiveSessions(w http.ResponseWriter, r 
 			apiTokens = []*api.Token{}
 		}
 		for _, apiToken := range apiTokens {
-			if !apiToken.Deactivated {
+			err = handler.uService.ValidateAPIToken(apiToken)
+			if err == nil && !apiToken.Deactivated {
 				sessionContainer := new(SessionContainer)
-				sessionContainer.CreatedAt = apiToken.CreatedAt.Unix()
-				sessionContainer.UdatedAt = apiToken.UpdatedAt.Unix()
-				sessionContainer.DeviceInfo = apiClient.APPName
+				sessionContainer.CreatedAt = apiToken.CreatedAt
+				sessionContainer.UpdatedAt = apiToken.UpdatedAt
+				sessionContainer.IPAddress = apiToken.IPAddress
+				sessionContainer.DeviceInfo = apiToken.DeviceInfo
+				sessionContainer.Type = entity.APIClientTypeInternal
 				sessionContainer.ID = apiToken.AccessToken
+
+				if apiClient.Type == entity.APIClientTypeExternal {
+					sessionContainer.DeviceInfo = apiClient.APPName
+					sessionContainer.Type = entity.APIClientTypeExternal
+				}
 
 				sessionContainers = append(sessionContainers, sessionContainer)
 			}
@@ -920,8 +955,8 @@ func (handler *UserAPIHandler) HandleGetActiveSessions(w http.ResponseWriter, r 
 
 }
 
-// HandleDeactivateSession is a handler func that handles the request for deactivating user's active session
-func (handler *UserAPIHandler) HandleDeactivateSession(w http.ResponseWriter, r *http.Request) {
+// HandleDeactivateSessions is a handler func that handles the request for deactivating user's active session
+func (handler *UserAPIHandler) HandleDeactivateSessions(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
@@ -931,35 +966,83 @@ func (handler *UserAPIHandler) HandleDeactivateSession(w http.ResponseWriter, r 
 		return
 	}
 
-	id := r.FormValue("id")
+	currentAPIToken, ok := ctx.Value(entity.Key("onepay_api_token")).(*api.Token)
 
-	session, err1 := handler.uService.FindSession(id)
-	apiToken, err2 := handler.uService.FindAPIToken(id)
-	if err1 != nil && err2 != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
-	// Incase of client check for current session deactivation
-	if session != nil {
-		session.Deactivated = true
-		handler.uService.UpdateSession(session)
+	format := mux.Vars(r)["format"]
+	idsString := r.FormValue("ids")
 
-	} else if apiToken != nil {
-		if apiToken.UserID != opUser.UserID {
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
+	ids := make([]string, 0)
+	nonDeactivatedSessions := make([]string, 0)
+	deactivatedSessions := make([]string, 0)
 
-		if apiToken.AccessToken == id {
-			http.Error(w, "can not deactivate current session", http.StatusBadRequest)
-			return
-		}
-
-		apiToken.Deactivated = true
-		handler.uService.UpdateAPIToken(apiToken)
+	empty, _ := regexp.MatchString(`^\s*$`, idsString)
+	if !empty {
+		reg := regexp.MustCompile(`\s+`)
+		ids = reg.Split(strings.TrimSpace(idsString), -1)
 	}
 
+	for _, id := range ids {
+		session, err1 := handler.uService.FindSession(id)
+		apiToken, err2 := handler.uService.FindAPIToken(id)
+		if err1 != nil && err2 != nil {
+			nonDeactivatedSessions = append(nonDeactivatedSessions, id)
+			continue
+		}
+
+		if session != nil {
+			session.Deactivated = true
+			err := handler.uService.UpdateSession(session)
+			if err != nil {
+				nonDeactivatedSessions = append(nonDeactivatedSessions, id)
+				continue
+			}
+			deactivatedSessions = append(deactivatedSessions, id)
+
+		} else if apiToken != nil {
+			// Checking for current session deactivation
+			if apiToken.UserID != opUser.UserID ||
+				apiToken.AccessToken == currentAPIToken.AccessToken {
+				nonDeactivatedSessions = append(nonDeactivatedSessions, id)
+				continue
+			}
+
+			apiToken.Deactivated = true
+			err := handler.uService.UpdateAPIToken(apiToken)
+			if err != nil {
+				nonDeactivatedSessions = append(nonDeactivatedSessions, id)
+				continue
+			}
+			deactivatedSessions = append(deactivatedSessions, id)
+		}
+	}
+
+	// Meaning some of the sessions hasn't been deactivated
+	if len(nonDeactivatedSessions) != 0 {
+
+		type SessionsStatusContainer struct {
+			NonDeactivatedSessions []string
+			DeactivatedSessions    []string
+		}
+
+		output, _ := tools.MarshalIndent(
+			SessionsStatusContainer{
+				DeactivatedSessions:    deactivatedSessions,
+				NonDeactivatedSessions: nonDeactivatedSessions,
+			}, "", "\t", format)
+		w.WriteHeader(http.StatusConflict)
+		w.Write(output)
+		return
+	}
+
+	output, _ := tools.MarshalIndent(deactivatedSessions, "", "\t", format)
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+	return
 }
 
 /* ++++++++++++++++++++++++++++++++++++++++++++ FORGOT PASSWORD +++++++++++++++++++++++++++++++++++++++++++ */

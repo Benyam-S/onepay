@@ -177,7 +177,7 @@ func (handler *UserAPIHandler) HandleRefreshAPITokenDE(w http.ResponseWriter, r 
 	err = bcrypt.CompareHashAndPassword(hasedPassword, []byte(password+opPassword.Salt))
 	if err != nil {
 
-		// registring fault
+		// registering fault
 		tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
 			fmt.Sprintf("%d", attempts+1), time.Hour*24)
 
