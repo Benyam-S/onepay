@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// HandleReceiveViaQRCode is a handler func that handles a request for receivng money via qr code
+// HandleReceiveViaQRCode is a handler func that handles a request for receiving money via qr code
 func (handler *UserAPIHandler) HandleReceiveViaQRCode(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
@@ -53,7 +53,7 @@ func (handler *UserAPIHandler) HandleReceiveViaQRCode(w http.ResponseWriter, r *
 
 	if err != nil && err.Error() != entity.HistoryCheckpointError {
 
-		// registring fault
+		// registering fault
 		tools.SetValue(handler.redisClient, entity.ReceiveFault+opUser.UserID,
 			fmt.Sprintf("%d", attempts+1), time.Hour*24)
 
@@ -128,7 +128,7 @@ func (handler *UserAPIHandler) HandleGetReceiveInfo(w http.ResponseWriter, r *ht
 
 	if err != nil {
 
-		// registring fault
+		// registering fault
 		tools.SetValue(handler.redisClient, entity.ReceiveFault+opUser.UserID,
 			fmt.Sprintf("%d", attempts+1), time.Hour*24)
 

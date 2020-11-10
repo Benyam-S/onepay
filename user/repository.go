@@ -29,6 +29,15 @@ type IPasswordRepository interface {
 	Delete(identifier string) (*entity.UserPassword, error)
 }
 
+// IPreferenceRepository is an interface that defines all the repository methods of a user preference struct
+type IPreferenceRepository interface {
+	Create(newUserPreference *entity.UserPreference) error
+	Find(identifier string) (*entity.UserPreference, error)
+	Update(userPreference *entity.UserPreference) error
+	UpdateValue(userPreference *entity.UserPreference, columnName string, columnValue interface{}) error
+	Delete(identifier string) (*entity.UserPreference, error)
+}
+
 // ISessionRepository is an interface that defines all the repository methods of a user's server side session struct
 type ISessionRepository interface {
 	Create(newOPSession *session.ServerSession) error

@@ -25,12 +25,12 @@ func userRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 
 	router.HandleFunc("/api/v1/oauth/user/register/init", handler.HandleInitAddUser)
 
-	router.HandleFunc("/api/v1/oauth/user/register/verify", handler.HandleVerifyOTP)
+	router.HandleFunc("/api/v1/oauth/user/register/verify", handler.HandleVerifyAddUserOTP)
 
 	router.HandleFunc("/api/v1/oauth/user/register/finish.{format:json|xml}", handler.HandleFinishAddUser)
 
-	router.HandleFunc("/api/v1/oauth/user", tools.MiddlewareFactory(handler.HandleDeleteUser, handler.Authorization,
-		handler.AccessTokenAuthentication)).Methods("DELETE")
+	router.HandleFunc("/api/v1/oauth/user.{format:json|xml}", tools.MiddlewareFactory(handler.HandleDeleteUser,
+		handler.PasswordFaultHandler, handler.Authorization, handler.AccessTokenAuthentication)).Methods("DELETE")
 
 	router.HandleFunc("/api/v1/oauth/user/{user_id}/profile.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetUser, handler.Authorization,
 		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
@@ -42,6 +42,9 @@ func userRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 	// 	handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
 
 	router.HandleFunc("/api/v1/oauth/user/profile.{format:json|xml}", tools.MiddlewareFactory(handler.HandleUpdateBasicInfo, handler.Authorization,
+		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
+
+	router.HandleFunc("/api/v1/oauth/user/profile/preference", tools.MiddlewareFactory(handler.HandleUpdateUserPreference, handler.Authorization,
 		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("PUT")
 
 	router.HandleFunc("/api/v1/oauth/user/profile/phonenumber.{format:json|xml}", tools.MiddlewareFactory(handler.HandleInitUpdatePhone, handler.Authorization,
@@ -97,8 +100,10 @@ func apiTokenRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 
 	router.HandleFunc("/api/v1/oauth/login/app.{format:json|xml}", handler.HandleInitLoginApp)
 
-	router.HandleFunc("/api/v1/oauth/refresh.{format:json|xml}", tools.MiddlewareFactory(handler.HandleRefreshAPITokenDE, handler.Authorization,
-		handler.AccessTokenAuthentication))
+	router.HandleFunc("/api/v1/oauth/login/app/verify.{format:json|xml}", handler.HandleVerifyLoginOTP)
+
+	router.HandleFunc("/api/v1/oauth/refresh.{format:json|xml}", tools.MiddlewareFactory(handler.HandleRefreshAPITokenDE,
+		handler.PasswordFaultHandler, handler.Authorization, handler.AccessTokenAuthentication))
 
 	router.HandleFunc("/api/v1/oauth/logout", tools.MiddlewareFactory(handler.HandleLogout, handler.Authorization,
 		handler.AccessTokenAuthentication))

@@ -25,6 +25,12 @@ type IService interface {
 	UpdatePassword(opPassword *entity.UserPassword) error
 	DeletePassword(identifier string) (*entity.UserPassword, error)
 
+	FindUserPreference(identifier string) (*entity.UserPreference, error)
+	ValidateUserPreference(columnName, columValue string) (interface{}, error)
+	UpdateUserPreference(userPreference *entity.UserPreference) error
+	UpdateUserPreferenceSingleValue(userID, columnName string, columnValue interface{}) error
+	DeleteUserPreference(identifier string) (*entity.UserPreference, error)
+
 	AddSession(opClientSession *session.ClientSession, opUser *entity.User, r *http.Request) error
 	FindSession(identifier string) (*session.ServerSession, error)
 	SearchSession(identifier string) ([]*session.ServerSession, error)

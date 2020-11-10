@@ -100,7 +100,7 @@ func initServer() {
 		panic(errors.New("unable to parse onepay config data"))
 	}
 
-	// Setting enviromental variables so they can be used any where on the application
+	// Setting environmental variables so they can be used any where on the application
 	os.Setenv("config_files_dir", configFilesDir)
 	os.Setenv("onepay_secret_key", sysConfig.SecretKey)
 	os.Setenv("onepay_cookie_name", sysConfig.CookieName)
@@ -117,6 +117,7 @@ func initServer() {
 
 	userRepo := urRepository.NewUserRepository(mysqlDB)
 	passwordRepo := urRepository.NewPasswordRepository(mysqlDB)
+	preferenceRepo := urRepository.NewPreferenceRepository(mysqlDB)
 	sessionRepo := urRepository.NewSessionRepository(mysqlDB)
 	apiClientRepo := urRepository.NewAPIClientRepository(mysqlDB)
 	apiTokenRepo := urRepository.NewAPITokenRepository(mysqlDB)
@@ -134,7 +135,7 @@ func initServer() {
 	changeNotifier := notifier.NewNotifier(sysConfig.ListenerURI)
 	/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-	userService := urService.NewUserService(userRepo, passwordRepo,
+	userService := urService.NewUserService(userRepo, passwordRepo, preferenceRepo,
 		sessionRepo, apiClientRepo, apiTokenRepo, changeNotifier)
 	deletedService := delService.NewDeletedService(deletedUserRepo, deletedLinkedAccountRepo,
 		frozenUserRepo, frozenClientRepo)
@@ -181,8 +182,9 @@ func initDB() {
 
 	fmt.Println("Connected to the database: mysql @GORM")
 
-	// Creating and Migrating tables from the structurs
+	// Creating and Migrating tables from the structures
 	mysqlDB.AutoMigrate(&entity.UserPassword{})
+	mysqlDB.AutoMigrate(&entity.UserPreference{})
 	mysqlDB.AutoMigrate(&entity.User{})
 	mysqlDB.AutoMigrate(&session.ServerSession{})
 	mysqlDB.AutoMigrate(&api.Client{})

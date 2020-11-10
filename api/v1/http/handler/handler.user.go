@@ -117,32 +117,16 @@ func (handler *UserAPIHandler) HandleInitAddUser(w http.ResponseWriter, r *http.
 	w.Write(output)
 }
 
-// HandleVerifyOTP is a handler func that handle a request for verifying otp token
-func (handler *UserAPIHandler) HandleVerifyOTP(w http.ResponseWriter, r *http.Request) {
+// HandleVerifyAddUserOTP is a handler func that handle a request for verifying otp token for add user process
+func (handler *UserAPIHandler) HandleVerifyAddUserOTP(w http.ResponseWriter, r *http.Request) {
 	otp := r.FormValue("otp")
 	nonce := r.FormValue("nonce")
 
-	// Checking for empty value
-	if len(otp) == 0 || len(nonce) == 0 {
+	// Analyzing nonce and otp
+	if err := tools.AnalyzeKeyValuePair(handler.redisClient, nonce, otp); err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-
-	// Retriving value from redis store
-	storedOTP, err := tools.GetValue(handler.redisClient, nonce)
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	// Checking if the otp provided by request match the otp from the database
-	if storedOTP != otp {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	// Removing key value pair from the redis store
-	tools.RemoveValues(handler.redisClient, nonce)
 
 	// The nonce below is a key where the new user data is stored
 	output, _ := json.Marshal(map[string]string{"nonce": otp + nonce})
@@ -427,24 +411,11 @@ func (handler *UserAPIHandler) HandleVerifyUpdateEmail(w http.ResponseWriter, r 
 	nonce := r.FormValue("nonce")
 	updatedUser := new(entity.User)
 
-	// Checking for empty value
-	if len(otp) == 0 || len(nonce) == 0 {
+	// Analyzing nonce and otp
+	if err := tools.AnalyzeKeyValuePair(handler.redisClient, nonce, otp); err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-
-	storedOTP, err := tools.GetValue(handler.redisClient, nonce)
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	if storedOTP != otp {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	tools.RemoveValues(handler.redisClient, nonce)
 
 	storedOPUser, err := tools.GetValue(handler.redisClient, otp+nonce)
 	if err != nil {
@@ -546,23 +517,11 @@ func (handler *UserAPIHandler) HandleVerifyUpdatePhone(w http.ResponseWriter, r 
 	nonce := r.FormValue("nonce")
 	updatedUser := new(entity.User)
 
-	if len(otp) == 0 || len(nonce) == 0 {
+	// Analyzing nonce and otp
+	if err := tools.AnalyzeKeyValuePair(handler.redisClient, nonce, otp); err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-
-	storedOTP, err := tools.GetValue(handler.redisClient, nonce)
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	if storedOTP != otp {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	tools.RemoveValues(handler.redisClient, nonce)
 
 	storedOPUser, err := tools.GetValue(handler.redisClient, otp+nonce)
 	if err != nil {
@@ -599,6 +558,16 @@ func (handler *UserAPIHandler) HandleChangePassword(w http.ResponseWriter, r *ht
 	newPassword := r.FormValue("new_password")
 	vPassword := r.FormValue("new_vPassword")
 
+	// checking for false attempts
+	falseAttempts, _ := tools.GetValue(handler.redisClient, entity.PasswordFault+opUser.UserID)
+	attempts, _ := strconv.ParseInt(falseAttempts, 0, 64)
+	if attempts >= 5 {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: entity.TooManyAttemptsError}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
 	opPassword, err := handler.uService.FindPassword(opUser.UserID)
 	if err != nil {
 		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
@@ -610,11 +579,19 @@ func (handler *UserAPIHandler) HandleChangePassword(w http.ResponseWriter, r *ht
 	hasedPassword, _ := base64.StdEncoding.DecodeString(opPassword.Password)
 	err = bcrypt.CompareHashAndPassword(hasedPassword, []byte(oldPassword+opPassword.Salt))
 	if err != nil {
+
+		// registering fault
+		tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
+			fmt.Sprintf("%d", attempts+1), time.Hour*24)
+
 		output, _ := tools.MarshalIndent(ErrorBody{Error: "invalid old password used"}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return
 	}
+
+	// clearing user's false attempts
+	tools.RemoveValues(handler.redisClient, entity.PasswordFault+opUser.UserID)
 
 	if newPassword == oldPassword {
 		output, _ := tools.MarshalIndent(ErrorBody{Error: "new password is identical with the old password"},
@@ -734,6 +711,33 @@ func (handler *UserAPIHandler) HandleUploadPhoto(w http.ResponseWriter, r *http.
 	}
 }
 
+// HandleUpdateUserPreference is a handler func that handles a request for updating user's preference
+func (handler *UserAPIHandler) HandleUpdateUserPreference(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
+
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	preferenceType := r.FormValue("type")
+	preferenceValueS := r.FormValue("value")
+
+	preferenceValue, err := handler.uService.ValidateUserPreference(preferenceType, preferenceValueS)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	err = handler.uService.UpdateUserPreferenceSingleValue(opUser.UserID, preferenceType, preferenceValue)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+}
+
 /* ++++++++++++++++++++++++++++++++++++++++++ REMOVING PROFILE DATA ++++++++++++++++++++++++++++++++++++++++++ */
 
 // HandleDeleteUser is a method that handles the request for deleting a user account
@@ -747,41 +751,13 @@ func (handler *UserAPIHandler) HandleDeleteUser(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	password := r.FormValue("password")
-
-	// checking for false attempts
-	falseAttempts, _ := tools.GetValue(handler.redisClient, entity.PasswordFault+opUser.UserID)
-	attempts, _ := strconv.ParseInt(falseAttempts, 0, 64)
-	if attempts >= 5 {
-		http.Error(w, entity.TooManyAttemptsError, http.StatusBadRequest)
-		return
-	}
-
-	// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
-	opPassword, err := handler.uService.FindPassword(opUser.UserID)
-	if err != nil {
-		http.Error(w, entity.InvalidPasswordError, http.StatusBadRequest)
-		return
-	}
-
-	// Comparing the hashed password with the given password
-	hasedPassword, _ := base64.StdEncoding.DecodeString(opPassword.Password)
-	err = bcrypt.CompareHashAndPassword(hasedPassword, []byte(password+opPassword.Salt))
-	if err != nil {
-		// registering fault
-		tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
-			fmt.Sprintf("%d", attempts+1), time.Hour*24)
-
-		http.Error(w, entity.InvalidPasswordError, http.StatusBadRequest)
-		return
-	}
-
-	// clearing user's false attempts
-	tools.RemoveValues(handler.redisClient, entity.PasswordFault+opUser.UserID)
+	format := mux.Vars(r)["format"]
 
 	userHistories, linkedAccounts, err := handler.app.InitDeleteOnePayAccount(opUser.UserID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 

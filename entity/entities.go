@@ -59,6 +59,12 @@ type UserHistory struct {
 	ReceiverSeen bool    `gorm:"default: false;"`
 }
 
+// UserPreference is a type that defines a OnePay user preference
+type UserPreference struct {
+	UserID              string `gorm:"primary_key; unique; not null"`
+	TwoStepVerification bool   `gorm:"not null; default: false"`
+}
+
 // MoneyToken is a type that defines a token generated for qr code
 type MoneyToken struct {
 	Code           string `gorm:"primary_key; unique; not null"`

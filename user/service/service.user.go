@@ -24,6 +24,7 @@ import (
 type Service struct {
 	userRepo          user.IUserRepository
 	passwordRepo      user.IPasswordRepository
+	preferenceRepo    user.IPreferenceRepository
 	sessionRepo       user.ISessionRepository
 	linkedAccountRepo linkedaccount.ILinkedAccountRepository
 	moneyTokenRepo    moneytoken.IMoneyTokenRepository
@@ -35,11 +36,12 @@ type Service struct {
 
 // NewUserService is a function that returns a new user service
 func NewUserService(userRepository user.IUserRepository,
-	passwordRepository user.IPasswordRepository, sessionRepository user.ISessionRepository,
-	apiClientRepository user.IAPIClientRepository, apiTokenRepository user.IAPITokenRepository,
-	profileChangeNotifier *notifier.Notifier) user.IService {
-	return &Service{userRepo: userRepository, passwordRepo: passwordRepository, sessionRepo: sessionRepository,
-		apiClientRepo: apiClientRepository, apiTokenRepo: apiTokenRepository, notifier: profileChangeNotifier}
+	passwordRepository user.IPasswordRepository, preferenceRepository user.IPreferenceRepository,
+	sessionRepository user.ISessionRepository, apiClientRepository user.IAPIClientRepository,
+	apiTokenRepository user.IAPITokenRepository, profileChangeNotifier *notifier.Notifier) user.IService {
+	return &Service{userRepo: userRepository, passwordRepo: passwordRepository, preferenceRepo: preferenceRepository,
+		sessionRepo: sessionRepository, apiClientRepo: apiClientRepository,
+		apiTokenRepo: apiTokenRepository, notifier: profileChangeNotifier}
 }
 
 // AddUser is a method that adds a new OnePay user to the system along with the password
@@ -48,10 +50,22 @@ func (service *Service) AddUser(opUser *entity.User, opPassword *entity.UserPass
 	if err != nil {
 		return errors.New("unable to add new user")
 	}
+
 	opPassword.UserID = opUser.UserID
 	err = service.passwordRepo.Create(opPassword)
 	if err != nil {
 		// Cleaning up if password is not add to the database
+		service.userRepo.Delete(opUser.UserID)
+		return errors.New("unable to add new user")
+	}
+
+	// Since user preference is initiated with a default value it can be created here.
+	userPreference := new(entity.UserPreference)
+	userPreference.UserID = opUser.UserID
+	err = service.preferenceRepo.Create(userPreference)
+	if err != nil {
+		// Cleaning up if password is not add to the database
+		service.passwordRepo.Delete(opUser.UserID)
 		service.userRepo.Delete(opUser.UserID)
 		return errors.New("unable to add new user")
 	}
@@ -257,7 +271,7 @@ func (service *Service) UpdateUser(opUser *entity.User) error {
 	return nil
 }
 
-// UpdateUserSingleValue is a method that updates a single column entiry of a user
+// UpdateUserSingleValue is a method that updates a single column entry of a user
 func (service *Service) UpdateUserSingleValue(userID, columnName string, columnValue interface{}) error {
 
 	User := entity.User{UserID: userID}
@@ -273,13 +287,14 @@ func (service *Service) UpdateUserSingleValue(userID, columnName string, columnV
 	return nil
 }
 
-// DeleteUser is a method that deletes a user from the system including it's session's and password and other datas
+// DeleteUser is a method that deletes a user from the system including it's session's and password and other data
 func (service *Service) DeleteUser(userID string) (*entity.User, error) {
 
 	// Removing the linked tables first
 	service.apiClientRepo.DeleteMultiple(userID)
 	service.apiTokenRepo.DeleteMultiple(userID)
 	service.passwordRepo.Delete(userID)
+	service.preferenceRepo.Delete(userID)
 	service.sessionRepo.DeleteMultiple(userID)
 
 	opUser, err := service.userRepo.Delete(userID)

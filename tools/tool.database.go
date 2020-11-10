@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -31,4 +32,29 @@ func GetValue(redisClient *redis.Client, key string) (string, error) {
 func RemoveValues(redisClient *redis.Client, key ...string) {
 	ctx := context.Background()
 	redisClient.Del(ctx, key...)
+}
+
+// AnalyzeKeyValuePair is a function that cross checks the given key value pair with the stored one
+func AnalyzeKeyValuePair(redisClient *redis.Client, key, value string) error {
+
+	// Checking for empty values
+	if len(key) == 0 || len(value) == 0 {
+		return errors.New("empty key value pair used")
+	}
+
+	// Retriving value from redis store
+	storedValue, err := GetValue(redisClient, key)
+	if err != nil {
+		return errors.New("value not found")
+	}
+
+	// Checking if the provided value matches the value from the database
+	if storedValue != value {
+		return errors.New("value does not match")
+	}
+
+	// Removing key value pair from the redis store
+	RemoveValues(redisClient, key)
+
+	return nil
 }

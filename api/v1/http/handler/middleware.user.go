@@ -2,10 +2,14 @@ package handler
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/Benyam-S/onepay/api"
 	"github.com/Benyam-S/onepay/entity"
@@ -158,4 +162,60 @@ func (handler *UserAPIHandler) AuthenticateScope(next http.HandlerFunc) http.Han
 		next(w, r)
 	}
 
+}
+
+// PasswordFaultHandler is a middleware that checks if the provided password in the request is valid or not.
+// If it is invalid it will register it as a fault.
+func (handler *UserAPIHandler) PasswordFaultHandler(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		ctx := r.Context()
+		opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
+
+		if !ok {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		format := mux.Vars(r)["format"]
+		password := r.FormValue("password")
+
+		// checking for false attempts
+		falseAttempts, _ := tools.GetValue(handler.redisClient, entity.PasswordFault+opUser.UserID)
+		attempts, _ := strconv.ParseInt(falseAttempts, 0, 64)
+		if attempts >= 5 {
+			output, _ := tools.MarshalIndent(ErrorBody{Error: entity.TooManyAttemptsError}, "", "\t", format)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(output)
+			return
+		}
+
+		// Checking if the password of the given user exists, it may seem redundant but it will prevent from null point exception
+		opPassword, err := handler.uService.FindPassword(opUser.UserID)
+		if err != nil {
+			output, _ := tools.MarshalIndent(ErrorBody{Error: entity.InvalidPasswordError}, "", "\t", format)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(output)
+			return
+		}
+
+		// Comparing the hashed password with the given password
+		hasedPassword, _ := base64.StdEncoding.DecodeString(opPassword.Password)
+		err = bcrypt.CompareHashAndPassword(hasedPassword, []byte(password+opPassword.Salt))
+		if err != nil {
+
+			// registering fault
+			tools.SetValue(handler.redisClient, entity.PasswordFault+opUser.UserID,
+				fmt.Sprintf("%d", attempts+1), time.Hour*24)
+
+			output, _ := tools.MarshalIndent(ErrorBody{Error: entity.InvalidPasswordError}, "", "\t", format)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(output)
+			return
+		}
+
+		// clearing user's false attempts
+		tools.RemoveValues(handler.redisClient, entity.PasswordFault+opUser.UserID)
+		next(w, r)
+	}
 }
