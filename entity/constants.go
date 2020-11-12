@@ -56,3 +56,27 @@ const PasswordFault = "password_fault-"
 
 // ReceiveFault is a constant that holds the value receive_fault-
 const ReceiveFault = "receive_fault-"
+
+// MessageIDPrefix is a constant that holds the value message_id-
+const MessageIDPrefix = "message_id-"
+
+// MessageTypeSMS is a constant that defines a message type sms
+const MessageTypeSMS = "sms"
+
+// MessageTypeEmail is a constant that defines a message type email
+const MessageTypeEmail = "email"
+
+// MessageOTPSMS is a constant that defines a message tempalate path for otp message sent through sms
+const MessageOTPSMS = "/message.sms.otp.json"
+
+// MessageVerificationSMS is a constant that defines a message tempalate path for verification message sent through sms
+const MessageVerificationSMS = "/message.sms.verification.json"
+
+// MessageVerificationEmail is a constant that defines a message tempalate path for verification message sent through email
+const MessageVerificationEmail = "/message.email.verification.json"
+
+// MessageResetEmail is a constant that defines a message tempalate path for resetting password message sent through email
+const MessageResetEmail = "/message.email.reset.json"
+
+// MessageResetSMS is a constant that defines a message tempalate path for resetting password message sent through sms
+const MessageResetSMS = "/message.sms.reset.json"

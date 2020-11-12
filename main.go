@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Benyam-S/onepay/notifier"
+	"github.com/Benyam-S/onepay/services/message"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -50,6 +51,8 @@ var (
 	mysqlDB        *gorm.DB
 	sysConfig      SystemConfig
 	err            error
+
+	messagingServiceChannel chan *entity.MessageTemp
 
 	userHandler    *urHandler.UserHandler
 	userAPIHandler *urAPIHandler.UserAPIHandler
@@ -149,6 +152,7 @@ func initServer() {
 	path = filepath.Join(path, "./logger")
 	dataLogger := logger.NewLogger(path)
 	channel := make(chan string)
+	messagingServiceChannel = make(chan *entity.MessageTemp)
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -159,7 +163,7 @@ func initServer() {
 
 	userHandler = urHandler.NewUserHandler(userService, redisClient)
 	userAPIHandler = urAPIHandler.NewUserAPIHandler(onepay, userService, deletedService,
-		accountProviderService, redisClient, upgrader)
+		accountProviderService, redisClient, upgrader, messagingServiceChannel)
 }
 
 // initDB initialize the database for takeoff
@@ -251,6 +255,8 @@ func main() {
 			}
 		}
 	}()
+
+	go message.StartMessageServices(redisClient, messagingServiceChannel)
 
 	http.ListenAndServe(":"+os.Getenv("server_port"), router)
 }

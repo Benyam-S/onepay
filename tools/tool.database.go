@@ -20,6 +20,8 @@ func SetValue(redisClient *redis.Client, key string, value string, expiry time.D
 
 // GetValue is a function that searchs for a value of a provided key on a redis database
 func GetValue(redisClient *redis.Client, key string) (string, error) {
+	// should refine and analyze the key
+
 	ctx := context.Background()
 	value, err := redisClient.Get(ctx, key).Result()
 	if err != nil {

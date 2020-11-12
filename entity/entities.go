@@ -163,6 +163,15 @@ type LocalizationBag struct {
 	PhoneCode   string
 }
 
+// MessageTemp is a struct that defines what the message contains and its type
+type MessageTemp struct {
+	ID      string
+	To      string
+	Type    string
+	Body    string
+	Subject string
+}
+
 // Key is a type that defines a key type that can be used a key value in context
 type Key string
 

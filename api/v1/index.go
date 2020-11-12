@@ -108,6 +108,9 @@ func apiTokenRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 	router.HandleFunc("/api/v1/oauth/logout", tools.MiddlewareFactory(handler.HandleLogout, handler.Authorization,
 		handler.AccessTokenAuthentication))
 
+	router.HandleFunc("/api/v1/oauth/resend", handler.HandleResendMessage).Methods("POST")
+	router.HandleFunc("/api/v1/oauth/send", handler.HandleSendMessage)
+
 }
 
 // transactionRoutes is a function that defines all the routes for handling a transaction

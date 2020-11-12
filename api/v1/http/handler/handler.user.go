@@ -23,6 +23,7 @@ import (
 	"github.com/Benyam-S/onepay/accountprovider"
 	"github.com/Benyam-S/onepay/client/http/session"
 	"github.com/Benyam-S/onepay/deleted"
+	"github.com/Benyam-S/onepay/services/message"
 
 	"github.com/Benyam-S/onepay/api"
 	"github.com/Benyam-S/onepay/app"
@@ -44,13 +45,16 @@ type UserAPIHandler struct {
 	redisClient          *redis.Client
 	upgrader             websocket.Upgrader
 	activeSocketChannels map[string][]chan interface{}
+	msChannel            chan *entity.MessageTemp
 }
 
 // NewUserAPIHandler is a function that returns a new user api handler
 func NewUserAPIHandler(commonApp *app.OnePay, userService user.IService, deletedService deleted.IService,
-	accountProviderService accountprovider.IService, redisClient *redis.Client, upgrader websocket.Upgrader) *UserAPIHandler {
+	accountProviderService accountprovider.IService, redisClient *redis.Client, upgrader websocket.Upgrader,
+	messagingServiceChannel chan *entity.MessageTemp) *UserAPIHandler {
 	return &UserAPIHandler{app: commonApp, uService: userService, dService: deletedService,
-		apService: accountProviderService, redisClient: redisClient, upgrader: upgrader}
+		apService: accountProviderService, redisClient: redisClient, upgrader: upgrader,
+		msChannel: messagingServiceChannel}
 }
 
 /* +++++++++++++++++++++++++++++++++++++++++++++ ADDING NEW USER +++++++++++++++++++++++++++++++++++++++++++++ */
@@ -76,35 +80,28 @@ func (handler *UserAPIHandler) HandleInitAddUser(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Generating OTP code
 	otp := tools.GenerateOTP()
-	// Generating unique key for identifying the OTP token
 	smsNonce := uuid.Must(uuid.NewRandom())
 
-	// Reading message body from our asset folder
-	wd, _ := os.Getwd()
-	dir := filepath.Join(wd, "./assets/messages", "/message.sms.otp.json")
-	data, err1 := ioutil.ReadFile(dir)
-
-	var messageSMS map[string][]string
-	err2 := json.Unmarshal(data, &messageSMS)
-
-	if err1 != nil || err2 != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	// msg := messageSMS["message_body"][0] + otp + ". " + messageSMS["message_body"][1]
-	// smsMessageID, err := tools.SendSMS(tools.OnlyPhoneNumber(newOPUser.PhoneNumber), msg)
+	// Creating the desired message body from template
+	// body, err := message.CreateMessageBodyFromTemplate(entity.MessageOTPSMS, otp)
 
 	// if err != nil {
 	// 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	// 	return
 	// }
 
+	// message := new(entity.MessageTemp)
+	// message.ID = entity.MessageIDPrefix + smsNonce.String()
+	// message.Body = body
+	// message.Type = entity.MessageTypeSMS
+	// message.To = newOPUser.PhoneNumber
+
+	// handler.msChannel <- message
+
 	// Saving all the data to a temporary database
 	tempOutput, err1 := json.Marshal(newOPUser)
-	err2 = tools.SetValue(handler.redisClient, smsNonce.String(), otp, time.Hour*6)
+	err2 := tools.SetValue(handler.redisClient, smsNonce.String(), otp, time.Hour*6)
 	err3 := tools.SetValue(handler.redisClient, otp+smsNonce.String(), string(tempOutput), time.Hour*6)
 	if err1 != nil || err2 != nil || err3 != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -362,32 +359,29 @@ func (handler *UserAPIHandler) HandleInitUpdateEmail(w http.ResponseWriter, r *h
 	otp := tools.GenerateOTP()
 	emailNonce := uuid.Must(uuid.NewRandom())
 
-	wd, _ := os.Getwd()
-	dir := filepath.Join(wd, "./assets/messages", "/message.email.verification.json")
-	data, err1 := ioutil.ReadFile(dir)
-
-	var messageEmail map[string][]string
-	err2 := json.Unmarshal(data, &messageEmail)
-
-	if err1 != nil || err2 != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
 	verificationLink := fmt.Sprintf("http://%s:%s/api/v1/user/profile/email/verify?nonce=%s&otp=%s",
 		os.Getenv("domain_name"), os.Getenv("server_port"), emailNonce, otp)
-	msg := messageEmail["message_body"][0] + opUser.UserID +
-		messageEmail["message_body"][1] + verificationLink +
-		". " + messageEmail["message_body"][2]
-	err := tools.SendEmail(opUser.Email, "OnePay Email Verification", msg)
+
+	// Creating the desired message body from template
+	body, err := message.CreateMessageBodyFromTemplate(entity.MessageVerificationEmail,
+		opUser.UserID, verificationLink)
 
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
+	message := new(entity.MessageTemp)
+	message.ID = entity.MessageIDPrefix + emailNonce.String()
+	message.Body = body
+	message.Subject = "OnePay Email Verification"
+	message.Type = entity.MessageTypeEmail
+	message.To = opUser.Email
+
+	handler.msChannel <- message
+
 	tempOutput, err1 := json.Marshal(opUser)
-	err2 = tools.SetValue(handler.redisClient, emailNonce.String(), otp, time.Hour*24)
+	err2 := tools.SetValue(handler.redisClient, emailNonce.String(), otp, time.Hour*24)
 	err3 := tools.SetValue(handler.redisClient, otp+emailNonce.String(), string(tempOutput), time.Hour*24)
 	if err1 != nil || err2 != nil || err3 != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -462,30 +456,25 @@ func (handler *UserAPIHandler) HandleInitUpdatePhone(w http.ResponseWriter, r *h
 	otp := tools.GenerateOTP()
 	smsNonce := uuid.Must(uuid.NewRandom())
 
-	wd, _ := os.Getwd()
-	dir := filepath.Join(wd, "./assets/messages", "/message.sms.verification.json")
-	data, err1 := ioutil.ReadFile(dir)
+	// Creating the desired message body from template
+	body, err := message.CreateMessageBodyFromTemplate(entity.MessageVerificationSMS,
+		opUser.UserID, otp)
 
-	var messageSMS map[string][]string
-	err2 := json.Unmarshal(data, &messageSMS)
-
-	if err1 != nil || err2 != nil {
+	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
-	// msg := messageSMS["message_body"][0] + opUser.UserID +
-	// 	messageSMS["message_body"][1] + otp +
-	// 	". " + messageSMS["message_body"][2]
-	// smsMessageID, err := tools.SendSMS(tools.OnlyPhoneNumber(opUser.PhoneNumber, msg)
+	message := new(entity.MessageTemp)
+	message.ID = entity.MessageIDPrefix + smsNonce.String()
+	message.Body = body
+	message.Type = entity.MessageTypeSMS
+	message.To = opUser.PhoneNumber
 
-	// if err != nil {
-	// 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-	// 	return
-	// }
+	handler.msChannel <- message
 
 	tempOutput, err1 := json.Marshal(opUser)
-	err2 = tools.SetValue(handler.redisClient, smsNonce.String(), otp, time.Hour*6)
+	err2 := tools.SetValue(handler.redisClient, smsNonce.String(), otp, time.Hour*6)
 	err3 := tools.SetValue(handler.redisClient, otp+smsNonce.String(), string(tempOutput), time.Hour*6)
 	if err1 != nil || err2 != nil || err3 != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -1044,23 +1033,18 @@ func (handler *UserAPIHandler) HandleInitForgotPassword(w http.ResponseWriter, r
 	if method == "email" {
 
 		nonce := uuid.Must(uuid.NewRandom())
+		restPath := os.Getenv("domain_name") + ":" +
+			os.Getenv("server_port") + "/user/password/rest/finish/" + nonce.String()
 
-		// Reading message body from our asset folder
-		wd, _ := os.Getwd()
-		dir := filepath.Join(wd, "./assets/messages", "/message.email.rest.json")
-		data, err1 := ioutil.ReadFile(dir)
+		// Creating the desired message body from template
+		msg, err := message.CreateMessageBodyFromTemplate(entity.MessageResetEmail, restPath)
 
-		var messageEmail map[string][]string
-		err2 := json.Unmarshal(data, &messageEmail)
-
-		if err1 != nil || err2 != nil {
+		if err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 
-		restPath := os.Getenv("domain_name") + ":" + os.Getenv("server_port") + "/user/password/rest/finish/" + nonce.String()
-		msg := messageEmail["message_body"][0] + restPath + ". " + messageEmail["message_body"][1]
-		err := tools.SendEmail(opUser.Email, "Rest OnePay User Password", msg)
+		err = tools.SendEmail(opUser.Email, "Rest OnePay User Password", msg)
 
 		if err != nil {
 			output, _ := tools.MarshalIndent(ErrorBody{Error: "unable to send message"}, "", "\t", format)
@@ -1078,23 +1062,18 @@ func (handler *UserAPIHandler) HandleInitForgotPassword(w http.ResponseWriter, r
 	} else if method == "phone_number" {
 
 		nonce := uuid.Must(uuid.NewRandom())
+		restPath := os.Getenv("domain_name") + ":" +
+			os.Getenv("server_port") + "/user/password/rest/finish/" + nonce.String()
 
-		// Reading message body from our asset folder
-		wd, _ := os.Getwd()
-		dir := filepath.Join(wd, "./assets/messages", "/message.sms.rest.json")
-		data, err1 := ioutil.ReadFile(dir)
+		// Creating the desired message body from template
+		msg, err := message.CreateMessageBodyFromTemplate(entity.MessageResetSMS, restPath)
 
-		var messageSMS map[string][]string
-		err2 := json.Unmarshal(data, &messageSMS)
-
-		if err1 != nil || err2 != nil {
+		if err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 
-		restPath := os.Getenv("domain_name") + ":" + os.Getenv("server_port") + "/user/password/rest/finish/" + nonce.String()
-		msg := messageSMS["message_body"][0] + restPath + ". " + messageSMS["message_body"][1]
-		_, err := tools.SendSMS(tools.OnlyPhoneNumber(opUser.PhoneNumber), msg)
+		_, err = tools.SendSMS(tools.OnlyPhoneNumber(opUser.PhoneNumber), msg)
 
 		if err != nil {
 			output, _ := tools.MarshalIndent(ErrorBody{Error: "unable to send message"}, "", "\t", format)

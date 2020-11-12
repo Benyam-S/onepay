@@ -4,10 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -128,28 +125,24 @@ func (handler *UserAPIHandler) HandleInitLoginApp(w http.ResponseWriter, r *http
 		otp := tools.GenerateOTP()
 		smsNonce := uuid.Must(uuid.NewRandom())
 
-		wd, _ := os.Getwd()
-		dir := filepath.Join(wd, "./assets/messages", "/message.sms.otp.json")
-		data, err1 := ioutil.ReadFile(dir)
-
-		var messageSMS map[string][]string
-		err2 := json.Unmarshal(data, &messageSMS)
-
-		if err1 != nil || err2 != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		// msg := messageSMS["message_body"][0] + otp + ". " + messageSMS["message_body"][1]
-		// smsMessageID, err := tools.SendSMS(tools.OnlyPhoneNumber(opUser.PhoneNumber), msg)
+		// Creating the desired message body from template
+		// body, err := message.CreateMessageBodyFromTemplate(entity.MessageOTPSMS, otp)
 
 		// if err != nil {
 		// 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		// 	return
 		// }
 
+		// message := new(entity.MessageTemp)
+		// message.ID = entity.MessageIDPrefix + smsNonce.String()
+		// message.Body = body
+		// message.Type = entity.MessageTypeSMS
+		// message.To = newOPUser.PhoneNumber
+
+		// handler.msChannel <- message
+
 		tempOutput, err1 := json.Marshal(opUser)
-		err2 = tools.SetValue(handler.redisClient, smsNonce.String(), otp, time.Hour*6)
+		err2 := tools.SetValue(handler.redisClient, smsNonce.String(), otp, time.Hour*6)
 		err3 := tools.SetValue(handler.redisClient, otp+smsNonce.String(), string(tempOutput), time.Hour*6)
 		if err1 != nil || err2 != nil || err3 != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -558,5 +551,23 @@ func (handler *UserAPIHandler) HandleCodeExchange(w http.ResponseWriter, r *http
 		"type": "Bearer"}, "", "\t", format)
 	w.WriteHeader(http.StatusOK)
 	w.Write(output)
+
+}
+
+// HandleResendMessage is a handler func that handles the request for resending message
+func (handler *UserAPIHandler) HandleResendMessage(w http.ResponseWriter, r *http.Request) {
+
+	messageID := r.FormValue("message_id")
+
+	message := new(entity.MessageTemp)
+	storedMessage, err := tools.GetValue(handler.redisClient, messageID)
+
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	json.Unmarshal([]byte(storedMessage), message)
+	handler.msChannel <- message
 
 }
