@@ -62,12 +62,12 @@ func AddToDailyTransaction(userID string, amount float64, redisClient *redis.Cli
 	return tools.SetValue(redisClient, "daily_transaction_limit:"+userID, currentAmountString, time.Hour*24)
 }
 
-// ClosingFile is a function that generates a file that contain a user histories and linked account information
+// ClosingStatement is a function that generates a file that contain a user histories and linked account information
 // for a user that is deleting it's onepay account
-func ClosingFile(opUser *entity.User, histories []*entity.UserHistory,
+func ClosingStatement(opUser *entity.User, histories []*entity.UserHistory,
 	linkedAccounts []*entity.LinkedAccountContainer) (string, error) {
 
-	fileName := tools.GenerateRandomString(7) + ".txt"
+	fileName := opUser.UserID + "_" + tools.GenerateRandomString(7) + ".txt"
 	wd, _ := os.Getwd()
 	filePath := filepath.Join(wd, "./assets/temp", fileName)
 	file, err := os.Create(filePath)

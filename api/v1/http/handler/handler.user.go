@@ -298,6 +298,21 @@ func (handler *UserAPIHandler) HandleGetPhoto(w http.ResponseWriter, r *http.Req
 	}
 }
 
+// HandleGetAccountStatement is a handler func that handles a request for getting user's account closing statement file
+func (handler *UserAPIHandler) HandleGetAccountStatement(w http.ResponseWriter, r *http.Request) {
+
+	location := mux.Vars(r)["id"]
+
+	if !strings.HasSuffix(location, ".txt") {
+		location += ".txt"
+	}
+
+	wd, _ := os.Getwd()
+	filePath := filepath.Join(wd, "./assets/temp", location)
+	http.ServeFile(w, r, filePath)
+
+}
+
 /* +++++++++++++++++++++++++++++++++++++++++++++ UPDATING PROFILE +++++++++++++++++++++++++++++++++++++++++++++ */
 
 // HandleUpdateBasicInfo is a handler func that handles a request for updating user's profile basic information
@@ -804,13 +819,18 @@ func (handler *UserAPIHandler) HandleDeleteUser(w http.ResponseWriter, r *http.R
 		linkedAccountContainers = append(linkedAccountContainers, linkedAccountContainer)
 	}
 
-	tempFile, err := app.ClosingFile(opUser, userHistories, linkedAccountContainers)
+	accountStatement, err := app.ClosingStatement(opUser, userHistories, linkedAccountContainers)
 
 	if err == nil {
-		wd, _ := os.Getwd()
-		filePath := filepath.Join(wd, "./assets/temp", tempFile)
-		http.ServeFile(w, r, filePath)
-		tools.RemoveFile(filePath)
+		// Sending the account statement file location
+		accountStatement = strings.TrimSuffix(accountStatement, ".txt")
+		type AccountStatement struct {
+			Location string
+		}
+
+		output, _ := tools.MarshalIndent(AccountStatement{Location: accountStatement}, "", "\t", format)
+		w.WriteHeader(http.StatusOK)
+		w.Write(output)
 	}
 
 }

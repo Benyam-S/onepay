@@ -61,6 +61,8 @@ func userRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 
 	router.HandleFunc("/api/v1/oauth/user/{user_id}/profile/pic", handler.HandleGetPhoto).Methods("GET")
 
+	router.HandleFunc("/api/v1/oauth/user/statement/{id}", handler.HandleGetAccountStatement).Methods("GET")
+
 	router.HandleFunc("/api/v1/oauth/user/profile/pic.{format:json|xml}", tools.MiddlewareFactory(handler.HandleUploadPhoto, handler.Authorization,
 		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("POST")
 
@@ -109,8 +111,6 @@ func apiTokenRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 		handler.AccessTokenAuthentication))
 
 	router.HandleFunc("/api/v1/oauth/resend", handler.HandleResendMessage).Methods("POST")
-	router.HandleFunc("/api/v1/oauth/send", handler.HandleSendMessage)
-
 }
 
 // transactionRoutes is a function that defines all the routes for handling a transaction
