@@ -61,6 +61,11 @@ func (service *Service) UpdateUserPreference(userPreference *entity.UserPreferen
 	if err != nil {
 		return errors.New("unable to update user preference")
 	}
+
+	/* ++++++++++++++ NOTIFYING CHANGE +++++++++++++++ */
+	service.notifier.NotifyPreferenceChange(userPreference.UserID)
+	/* +++++++++++++++++++++++++++++++++++++++++++++++ */
+
 	return nil
 }
 
@@ -72,6 +77,10 @@ func (service *Service) UpdateUserPreferenceSingleValue(userID, columnName strin
 	if err != nil {
 		return errors.New("unable to update user preference")
 	}
+
+	/* ++++++++++++++ NOTIFYING CHANGE +++++++++++++++ */
+	service.notifier.NotifyPreferenceChange(userPreference.UserID)
+	/* +++++++++++++++++++++++++++++++++++++++++++++++ */
 
 	return nil
 }

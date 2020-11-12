@@ -38,6 +38,26 @@ func (notifier Notifier) NotifyProfileChange(id string) error {
 	return nil
 }
 
+// NotifyPreferenceChange is a method that notify a certain user preference change to its listener
+func (notifier Notifier) NotifyPreferenceChange(id string) error {
+
+	client := new(http.Client)
+	output := bytes.NewBufferString(id)
+	url := notifier.ListenerURI + "/api/v1/listener/preference"
+
+	request, err := http.NewRequest("PUT", url, output)
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Do(request)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // NotifyWalletChange is a method that notify a certain user wallet change to its listener
 func (notifier Notifier) NotifyWalletChange(id string) error {
 

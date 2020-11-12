@@ -219,6 +219,8 @@ func websocketRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 
 	router.HandleFunc("/api/v1/listener/profile", handler.HandleListenToProfileChange).Methods("PUT")
 
+	router.HandleFunc("/api/v1/listener/preference", handler.HandleListenToPreferenceChange).Methods("PUT")
+
 	router.HandleFunc("/api/v1/listener/wallet", handler.HandleListenToWalletChange).Methods("PUT")
 
 	router.HandleFunc("/api/v1/listener/history", handler.HandleListenToHistoryChange).Methods("PUT")

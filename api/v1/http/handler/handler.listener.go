@@ -31,6 +31,29 @@ func (handler *UserAPIHandler) HandleListenToProfileChange(w http.ResponseWriter
 	}
 }
 
+// HandleListenToPreferenceChange is a handler func that listens to user preference change from its notifier
+func (handler *UserAPIHandler) HandleListenToPreferenceChange(w http.ResponseWriter, r *http.Request) {
+
+	handler.Lock()
+	defer handler.Unlock()
+
+	userIDB, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return
+	}
+
+	userID := string(userIDB)
+	userPreference, err := handler.uService.FindUserPreference(userID)
+	if err != nil {
+		return
+	}
+
+	activeSocketChannels := handler.activeSocketChannels[userID]
+	for _, channel := range activeSocketChannels {
+		channel <- NotifierContainer{Type: "preference", Body: userPreference}
+	}
+}
+
 // HandleListenToWalletChange is a handler func that listens to wallet change from its notifier
 func (handler *UserAPIHandler) HandleListenToWalletChange(w http.ResponseWriter, r *http.Request) {
 
