@@ -53,10 +53,10 @@ func (repo *LinkedAccountRepository) Find(identifier string) (*entity.LinkedAcco
 }
 
 // Search is a method that searchs for a linked account that match the column name and value.
-func (repo *LinkedAccountRepository) Search(colunmName string, columnValue interface{}) []*entity.LinkedAccount {
+func (repo *LinkedAccountRepository) Search(columnName string, columnValue interface{}) []*entity.LinkedAccount {
 	var linkedAccounts []*entity.LinkedAccount
 	err := repo.conn.Model(entity.LinkedAccount{}).
-		Where(colunmName+" = ?", columnValue).
+		Where(columnName+" = ?", columnValue).
 		Find(&linkedAccounts).Error
 
 	if err != nil {

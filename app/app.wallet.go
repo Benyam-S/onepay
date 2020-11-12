@@ -22,7 +22,7 @@ func (onepay *OnePay) DrainWallet(userID, linkedAccountID string) error {
 	if amount <= 0 {
 		return errors.New("can not drain empty wallet")
 	}
-	// draning the account
+	// draining the account
 	opWallet.Amount = 0
 
 	linkedAccount, err := onepay.LinkedAccountService.FindLinkedAccount(linkedAccountID)

@@ -36,7 +36,7 @@ func (service *Service) FindMoneyToken(identifier string) (*entity.MoneyToken, e
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("money token not found")
 	}
 
 	moneyToken, err := service.moneyTokenRepo.Find(identifier)

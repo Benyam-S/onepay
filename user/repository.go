@@ -18,7 +18,7 @@ type IUserRepository interface {
 	UpdateValue(opUser *entity.User, columnName string, columnValue interface{}) error
 	Delete(identifier string) (*entity.User, error)
 	IsUnique(columnName string, columnValue interface{}) bool
-	IsUniqueRexp(columnName string, columnPattern string) bool
+	IsUniqueRegx(columnName string, columnPattern string) bool
 }
 
 // IPasswordRepository is an interface that defines all the repository methods of a user's password struct

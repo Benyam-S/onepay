@@ -128,19 +128,19 @@ func (repo *MoneyTokenRepository) Delete(identifier string) (*entity.MoneyToken,
 // DeleteMultiple is a method that deletes multiple money tokens from the database using the identifier.
 // In DeleteMultiple() sender_id is only used as a key
 func (repo *MoneyTokenRepository) DeleteMultiple(identifier string) ([]*entity.MoneyToken, error) {
-	var moenytokens []*entity.MoneyToken
-	err := repo.conn.Model(entity.MoneyToken{}).Where("sender_id = ?", identifier).Find(&moenytokens).Error
+	var moneyTokens []*entity.MoneyToken
+	err := repo.conn.Model(entity.MoneyToken{}).Where("sender_id = ?", identifier).Find(&moneyTokens).Error
 
 	if err != nil {
 		return nil, err
 	}
 
-	if len(moenytokens) == 0 {
+	if len(moneyTokens) == 0 {
 		return nil, errors.New("no money token for the provided identifier")
 	}
 
 	repo.conn.Model(entity.MoneyToken{}).Where("sender_id = ?", identifier).Delete(entity.MoneyToken{})
-	return moenytokens, nil
+	return moneyTokens, nil
 }
 
 // IsUnique is a method that determines whether a certain column value is unique in the money tokens table

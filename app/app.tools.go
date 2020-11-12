@@ -12,7 +12,7 @@ import (
 	"github.com/go-redis/redis"
 )
 
-// GetTransactionFee is a function that returns the appropirate transaction fee for the provided amount
+// GetTransactionFee is a function that returns the appropriate transaction fee for the provided amount
 func GetTransactionFee(amount float64) float64 {
 
 	transactionFee, _ := strconv.ParseFloat(os.Getenv(entity.TransactionFee), 64)
@@ -75,7 +75,7 @@ func ClosingStatement(opUser *entity.User, histories []*entity.UserHistory,
 		return "", err
 	}
 
-	_, err = file.WriteString("\n\n ********************************* USER PROFIEL ********************************* \n\n")
+	_, err = file.WriteString("\n\n ********************************* USER PROFILE ********************************* \n\n")
 	if err != nil {
 		return "", err
 	}

@@ -55,7 +55,7 @@ func (handler *UserHandler) HandleInitAddUser(w http.ResponseWriter, r *http.Req
 
 	// Generating OTP code
 	otp := tools.GenerateOTP()
-	// Generating unique key for identifing the OTP token
+	// Generating unique key for identifying the OTP token
 	smsNonce := uuid.Must(uuid.NewRandom())
 
 	// Reading message body from our asset folder
@@ -157,7 +157,7 @@ func (handler *UserHandler) HandleFinishAddUser(w http.ResponseWriter, r *http.R
 	// Removing key value pair from the redis store
 	tools.RemoveValues(handler.redisClient, nonce)
 
-	// unmarshaling user data
+	// unmarshal user data
 	json.Unmarshal([]byte(storedOPUser), newOPUser)
 
 	err = handler.uService.AddUser(newOPUser, newOPPassword)

@@ -38,7 +38,7 @@ func (service *Service) FindWallet(identifier string) (*entity.UserWallet, error
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("user wallet not found")
 	}
 
 	opWallet, err := service.walletRepo.Find(identifier)

@@ -15,7 +15,7 @@ type Logger struct {
 	historyLogDir    string
 }
 
-// NewLogger is a function that returns a logger for OnePay fata errors
+// NewLogger is a function that returns a logger for OnePay fatal errors
 func NewLogger(path string) *Logger {
 
 	walletLogDirectory := filepath.Join(path, "log.wallet.json")
@@ -73,7 +73,7 @@ func (logger *Logger) LoggedMoneyTokens() []*entity.MoneyToken {
 	return loggedMoneyTokens
 }
 
-// LogWallet is a method that logges a wallet struct in log file
+// LogWallet is a method that logs a wallet struct in log file
 func (logger *Logger) LogWallet(opWallet *entity.UserWallet) error {
 
 	loggedWallets := make([]*entity.UserWallet, 0)
@@ -97,7 +97,7 @@ func (logger *Logger) LogWallet(opWallet *entity.UserWallet) error {
 	return nil
 }
 
-// LogHistory is a method that logges a history struct in log file
+// LogHistory is a method that logs a history struct in log file
 func (logger *Logger) LogHistory(opHistory *entity.UserHistory) error {
 
 	loggedHistories := make([]*entity.UserHistory, 0)
@@ -121,7 +121,7 @@ func (logger *Logger) LogHistory(opHistory *entity.UserHistory) error {
 	return nil
 }
 
-// LogMoneyToken is a method that logges a money token struct in log file
+// LogMoneyToken is a method that logs a money token struct in log file
 func (logger *Logger) LogMoneyToken(moneyToken *entity.MoneyToken) error {
 
 	moneyTokens := make([]*entity.MoneyToken, 0)

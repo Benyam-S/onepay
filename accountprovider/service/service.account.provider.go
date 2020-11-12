@@ -66,7 +66,7 @@ func (service *Service) FindAccountProvider(identifier string) (*entity.AccountP
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("account provider not found")
 	}
 
 	accountProvider, err := service.accountProviderRepo.Find(identifier)

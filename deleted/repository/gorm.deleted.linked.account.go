@@ -46,11 +46,11 @@ func (repo *DeletedLinkedAccountRepository) Find(identifier string) (*entity.Del
 }
 
 // Search is a method that searchs for a linked account that match the column name and value.
-func (repo *DeletedLinkedAccountRepository) Search(colunmName string, columnValue interface{}) []*entity.DeletedLinkedAccount {
+func (repo *DeletedLinkedAccountRepository) Search(columnName string, columnValue interface{}) []*entity.DeletedLinkedAccount {
 
 	var deletedLinkedAccounts []*entity.DeletedLinkedAccount
 	err := repo.conn.Model(entity.DeletedLinkedAccount{}).
-		Where(colunmName+" = ?", columnValue).
+		Where(columnName+" = ?", columnValue).
 		Find(&deletedLinkedAccounts).Error
 
 	if err != nil {

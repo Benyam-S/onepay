@@ -65,7 +65,7 @@ func (onepay *OnePay) UserHistory(userID string, pagenation int64, viewBys ...st
 				entity.MethodTransactionQRCode, entity.MethodPaymentQRCode,
 				entity.MethodWithdrawn, entity.MethodRecharged)
 		} else {
-			// If it is unkown view by
+			// If it is unknown view by
 			continue
 		}
 

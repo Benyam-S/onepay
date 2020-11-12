@@ -52,11 +52,11 @@ func (repo *DeletedUserRepository) Search(key string, pageNum int64, columns ...
 	var sqlValues []interface{}
 
 	for _, column := range columns {
-		// modifing the key so that it can match the database phone number values
+		// modifying the key so that it can match the database phone number values
 		if column == "phone_number" {
-			splitedKey := strings.Split(key, "")
-			if splitedKey[0] == "0" {
-				modifiedKey := "+251" + strings.Join(splitedKey[1:], "")
+			splitKey := strings.Split(key, "")
+			if splitKey[0] == "0" {
+				modifiedKey := "+251" + strings.Join(splitKey[1:], "")
 				whereStmt = append(whereStmt, fmt.Sprintf(" %s = ? ", column))
 				sqlValues = append(sqlValues, modifiedKey)
 				continue
@@ -72,7 +72,7 @@ func (repo *DeletedUserRepository) Search(key string, pageNum int64, columns ...
 	return deletedOPUsers
 }
 
-// SearchWRegx is a method that searchs and returns set of deleted users limited to the key identifier and page number using regular experssions
+// SearchWRegx is a method that searchs and returns set of deleted users limited to the key identifier and page number using regular expersions
 func (repo *DeletedUserRepository) SearchWRegx(key string, pageNum int64, columns ...string) []*entity.DeletedUser {
 	var deletedOPUsers []*entity.DeletedUser
 	var whereStmt []string

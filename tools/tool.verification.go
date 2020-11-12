@@ -19,7 +19,7 @@ type APIClientSMS struct {
 	From      string `json:"from"`
 }
 
-// SMTPContainer is a type that defines all the entites for sending email using smtp
+// SMTPContainer is a type that defines all the entities for sending email using smtp
 type SMTPContainer struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`

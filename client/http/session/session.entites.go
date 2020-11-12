@@ -31,7 +31,7 @@ type ServerSession struct {
 	Deactivated bool // This can be used to identify a session that has been logged out
 }
 
-// Valid a is a method that ensures session is type jwt.Clamis
+// Valid a is a method that ensures session is type jwt.Claims
 func (session ClientSession) Valid() error {
 	if time.Now().Unix() > session.ExpiresAt {
 		return errors.New("invalid session, session has expired")

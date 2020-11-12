@@ -315,7 +315,7 @@ func (handler *UserAPIHandler) HandleAuthentication(w http.ResponseWriter, r *ht
 	}
 
 	if apiClient.CallBack != redirectURI {
-		output, _ := tools.MarshalIndent(ErrorBody{Error: "unregistred redirect uri used"}, "", "\t", format)
+		output, _ := tools.MarshalIndent(ErrorBody{Error: "unregistered redirect uri used"}, "", "\t", format)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(output)
 		return

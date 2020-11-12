@@ -31,7 +31,7 @@ func (service *Service) FindSession(identifier string) (*session.ServerSession, 
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("session not found")
 	}
 
 	serverSession, err := service.sessionRepo.Find(identifier)
@@ -46,7 +46,7 @@ func (service *Service) SearchSession(identifier string) ([]*session.ServerSessi
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("no session found for the provided identifier")
 	}
 
 	serverSessions, err := service.sessionRepo.Search(identifier)

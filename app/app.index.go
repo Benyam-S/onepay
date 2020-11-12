@@ -9,7 +9,7 @@ import (
 	"github.com/Benyam-S/onepay/wallet"
 )
 
-// OnePay is a struct that defines all the methods and the fuctions that the onepay system can perform
+// OnePay is a struct that defines all the methods and the functions that the onepay system can perform
 type OnePay struct {
 	WalletService          wallet.IService
 	HistoryService         history.IService

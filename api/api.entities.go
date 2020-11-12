@@ -46,7 +46,7 @@ func (Client) TableName() string {
 	return "api_clients"
 }
 
-// Valid a is a method that ensures Token is type jwt.Clamis
+// Valid a is a method that ensures Token is type jwt.Claims
 func (apiToken Token) Valid() error {
 	if time.Now().Unix() > apiToken.ExpiresAt {
 		return errors.New("invalid token, api token has expired")

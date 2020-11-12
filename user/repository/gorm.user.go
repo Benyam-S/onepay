@@ -105,12 +105,12 @@ func (repo *UserRepository) Search(key string, pageNum int64, columns ...string)
 	var sqlValues []interface{}
 
 	for _, column := range columns {
-		// modifing the key so that it can match the database phone number values
+		// modifying the key so that it can match the database phone number values
 		if column == "phone_number" {
 			modifiedKey := key
-			splitedKey := strings.Split(key, "")
-			if splitedKey[0] == "0" && len(splitedKey) == 10 {
-				modifiedKey = "+251" + strings.Join(splitedKey[1:], "")
+			splitKey := strings.Split(key, "")
+			if splitKey[0] == "0" && len(splitKey) == 10 {
+				modifiedKey = "+251" + strings.Join(splitKey[1:], "")
 			}
 			modifiedKey = `^` + tools.EscapeRegexpForDatabase(modifiedKey) + `(\\[[a-zA-Z]{2}])?$`
 			whereStmt = append(whereStmt, fmt.Sprintf(" %s REGEXP '"+modifiedKey+"' ", column))
@@ -126,7 +126,7 @@ func (repo *UserRepository) Search(key string, pageNum int64, columns ...string)
 	return opUsers
 }
 
-// SearchWRegx is a method that searchs and returns set of users limited to the key identifier and page number using regular experssions
+// SearchWRegx is a method that searchs and returns set of users limited to the key identifier and page number using regular expersions
 func (repo *UserRepository) SearchWRegx(key string, pageNum int64, columns ...string) []*entity.User {
 	var opUsers []*entity.User
 	var whereStmt []string
@@ -198,8 +198,8 @@ func (repo *UserRepository) IsUnique(columnName string, columnValue interface{})
 	return 0 >= totalCount
 }
 
-// IsUniqueRexp is a method that determines whether a certain column value pattern is unique in the user table
-func (repo *UserRepository) IsUniqueRexp(columnName string, columnPattern string) bool {
+// IsUniqueRegx is a method that determines whether a certain column value pattern is unique in the user table
+func (repo *UserRepository) IsUniqueRegx(columnName string, columnPattern string) bool {
 	var totalCount int
 	repo.conn.Raw("SELECT COUNT(*) FROM users WHERE " + columnName +
 		" REGEXP '" + columnPattern + "'").Count(&totalCount)

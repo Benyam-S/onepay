@@ -2,7 +2,7 @@ package deleted
 
 import "github.com/Benyam-S/onepay/entity"
 
-// IDeletedUserRepository is an inteface that defines all the repository methods for managing deleted users
+// IDeletedUserRepository is an interface that defines all the repository methods for managing deleted users
 type IDeletedUserRepository interface {
 	Create(deletedOPUser *entity.DeletedUser) error
 	Find(identifier string) (*entity.DeletedUser, error)
@@ -13,11 +13,11 @@ type IDeletedUserRepository interface {
 	Delete(identifier string) (*entity.DeletedUser, error)
 }
 
-// IDeletedLinkedAccountRepository is an inteface that defines all the repository methods for managing deleted linked accounts
+// IDeletedLinkedAccountRepository is an interface that defines all the repository methods for managing deleted linked accounts
 type IDeletedLinkedAccountRepository interface {
 	Create(deletedLinkedAccount *entity.DeletedLinkedAccount) error
 	Find(identifier string) (*entity.DeletedLinkedAccount, error)
-	Search(colunmName string, columnValue interface{}) []*entity.DeletedLinkedAccount
+	Search(columnName string, columnValue interface{}) []*entity.DeletedLinkedAccount
 	SearchMultiple(key string, pageNum int64, columns ...string) ([]*entity.DeletedLinkedAccount, int64)
 	Update(deletedLinkedAccount *entity.DeletedLinkedAccount) error
 	Delete(identifier string) (*entity.DeletedLinkedAccount, error)
@@ -25,7 +25,7 @@ type IDeletedLinkedAccountRepository interface {
 	IsUnique(columnName string, columnValue interface{}) bool
 }
 
-// IFrozenUserRepository is an inteface that defines all the repository methods for managing frozen users
+// IFrozenUserRepository is an interface that defines all the repository methods for managing frozen users
 type IFrozenUserRepository interface {
 	Create(frozenOPUser *entity.FrozenUser) error
 	Find(identifier string) (*entity.FrozenUser, error)
@@ -35,7 +35,7 @@ type IFrozenUserRepository interface {
 	Delete(identifier string) (*entity.FrozenUser, error)
 }
 
-// IFrozenClientRepository is an inteface that defines all the repository methods for managing frozen api clients
+// IFrozenClientRepository is an interface that defines all the repository methods for managing frozen api clients
 type IFrozenClientRepository interface {
 	Create(frozenAPIClient *entity.FrozenClient) error
 	Find(identifier string) (*entity.FrozenClient, error)

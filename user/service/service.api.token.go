@@ -32,7 +32,7 @@ func (service *Service) FindAPIToken(identifier string) (*api.Token, error) {
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("api token not found")
 	}
 
 	apiToken, err := service.apiTokenRepo.Find(identifier)
@@ -47,7 +47,7 @@ func (service *Service) SearchAPIToken(identifier string) ([]*api.Token, error) 
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("no api token found for the provided identifier")
 	}
 
 	apiTokens, err := service.apiTokenRepo.Search(identifier)
@@ -90,7 +90,7 @@ func (service *Service) ValidateAPIToken(apiToken *api.Token) error {
 	return nil
 }
 
-// UpdateAPIToken is a method that updates a certain's api token
+// UpdateAPIToken is a method that updates a certain api token
 func (service *Service) UpdateAPIToken(apiToken *api.Token) error {
 
 	err := service.apiTokenRepo.Update(apiToken)

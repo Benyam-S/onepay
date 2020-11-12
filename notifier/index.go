@@ -18,7 +18,7 @@ func NewNotifier(url string) *Notifier {
 	return &Notifier{ListenerURI: url}
 }
 
-// NotifyProfileChange is a method that notify a certain user proifle change to its listener
+// NotifyProfileChange is a method that notify a certain user profile change to its listener
 func (notifier Notifier) NotifyProfileChange(id string) error {
 
 	client := new(http.Client)

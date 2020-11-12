@@ -13,7 +13,7 @@ func (service *Service) FindUserPreference(identifier string) (*entity.UserPrefe
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("user preference not found")
 	}
 
 	userPreference, err := service.preferenceRepo.Find(identifier)

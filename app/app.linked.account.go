@@ -68,7 +68,7 @@ func (onepay *OnePay) AddLinkedAccount(userID, accountID, accountProviderID stri
 	}
 
 	// we can insert this method to middleman package if needed
-	// but for now all we need to check is the availablity of the account provider
+	// but for now all we need to check is the availability of the account provider
 	_, err := onepay.AccountProviderService.FindAccountProvider(accountProviderID)
 	if err != nil {
 		return "", err
@@ -95,7 +95,7 @@ func (onepay *OnePay) AddLinkedAccount(userID, accountID, accountProviderID stri
 	return nonce.String(), nil
 }
 
-// VerifyLinkedAccount is a method that verify if the user has inputed a valid nonce with it's otp
+// VerifyLinkedAccount is a method that verify if the user has entered a valid nonce with it's otp
 func (onepay *OnePay) VerifyLinkedAccount(otp, nonce string, redisClient *redis.Client) (*entity.LinkedAccountContainer, error) {
 
 	value, err := tools.GetValue(redisClient, nonce)
@@ -116,7 +116,7 @@ func (onepay *OnePay) VerifyLinkedAccount(otp, nonce string, redisClient *redis.
 	}
 
 	// we can insert this method to middleman package if needed
-	// but for now all we need to check is the availablity of the account provider
+	// but for now all we need to check is the availability of the account provider
 	_, err = onepay.AccountProviderService.FindAccountProvider(linkedAccountInfo["account_provider_id"])
 	if err != nil {
 		return nil, err

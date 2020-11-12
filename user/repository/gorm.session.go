@@ -84,7 +84,7 @@ func (repo *SessionRepository) SearchMultiple(key string, pageNum int64, columns
 	return opSessions
 }
 
-// SearchMultipleWRegx is a method that searchs and returns set of server side sessions limited to the key identifier and page number using regular experssions
+// SearchMultipleWRegx is a method that searchs and returns set of server side sessions limited to the key identifier and page number using regular expersions
 func (repo *SessionRepository) SearchMultipleWRegx(key string, pageNum int64, columns ...string) []*session.ServerSession {
 
 	var opSessions []*session.ServerSession

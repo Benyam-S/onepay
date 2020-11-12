@@ -15,7 +15,7 @@ func (service *Service) FindPassword(identifier string) (*entity.UserPassword, e
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("password not found")
 	}
 
 	opPassword, err := service.passwordRepo.Find(identifier)

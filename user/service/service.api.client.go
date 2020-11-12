@@ -28,7 +28,7 @@ func (service *Service) FindAPIClient(identifier string) (*api.Client, error) {
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("api client not found")
 	}
 
 	apiClient, err := service.apiClientRepo.Find(identifier)
@@ -44,7 +44,7 @@ func (service *Service) SearchAPIClient(identifier, clientType string) ([]*api.C
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("no api client found for the provided identifier and filter")
 	}
 
 	apiClientsUnFiltered, err := service.apiClientRepo.Search(identifier)
@@ -88,7 +88,7 @@ func (service *Service) AllAPIClients(pagination string) []*api.Client {
 	return service.apiClientRepo.All(pageNum)
 }
 
-// UpdateAPIClient is a method that updates a certain's api client
+// UpdateAPIClient is a method that updates a certain api client
 func (service *Service) UpdateAPIClient(apiClient *api.Client) error {
 
 	err := service.apiClientRepo.Update(apiClient)
@@ -98,7 +98,7 @@ func (service *Service) UpdateAPIClient(apiClient *api.Client) error {
 	return nil
 }
 
-// DeleteAPIClient is a method that deletes a certain's api client using the identifier
+// DeleteAPIClient is a method that deletes a certain api client using the identifier
 func (service *Service) DeleteAPIClient(identifier string) (*api.Client, error) {
 
 	apiClient, err := service.apiClientRepo.Delete(identifier)

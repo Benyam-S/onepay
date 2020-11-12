@@ -8,12 +8,12 @@ import (
 	"github.com/Benyam-S/onepay/entity"
 )
 
-// ClosingFile is a function that generates a file that contain a user histories and linked account information
+// ClosingStatement is a function that generates a file that contain a user histories and linked account information
 // for a user that is deleting it's onepay account
-func ClosingFile(opUser *entity.Staff, histories []*entity.UserHistory,
+func ClosingStatement(opUser *entity.Staff, histories []*entity.UserHistory,
 	linkedAccounts []*entity.LinkedAccount) (string, error) {
 
-	fileName := GenerateRandomString(7) + ".txt"
+	fileName := opUser.UserID + "_" + GenerateRandomString(7) + ".txt"
 	wd, _ := os.Getwd()
 	filePath := filepath.Join(wd, "./assets/temp", fileName)
 	file, err := os.Create(filePath)
@@ -21,7 +21,7 @@ func ClosingFile(opUser *entity.Staff, histories []*entity.UserHistory,
 		return "", err
 	}
 
-	_, err = file.WriteString("\n\n ********************************* USER PROFIEL ********************************* \n\n")
+	_, err = file.WriteString("\n\n ********************************* USER PROFILE ********************************* \n\n")
 	if err != nil {
 		return "", err
 	}

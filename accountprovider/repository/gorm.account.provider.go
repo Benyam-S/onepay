@@ -64,10 +64,10 @@ func (repo *AccountProviderRepository) All() []*entity.AccountProvider {
 }
 
 // Search is a method that searchs for an account provider that match the column name and value.
-func (repo *AccountProviderRepository) Search(colunmName string, columnValue interface{}) []*entity.AccountProvider {
+func (repo *AccountProviderRepository) Search(columnName string, columnValue interface{}) []*entity.AccountProvider {
 	var accountProviders []*entity.AccountProvider
 	err := repo.conn.Model(entity.AccountProvider{}).
-		Where(colunmName+" = ?", columnValue).
+		Where(columnName+" = ?", columnValue).
 		Find(&accountProviders).Error
 
 	if err != nil {

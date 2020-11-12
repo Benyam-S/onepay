@@ -132,14 +132,14 @@ func (service *Service) ValidateUserProfile(opUser *entity.User) entity.ErrMap {
 		}
 
 		phoneNumberPattern := `^` + tools.EscapeRegexpForDatabase(phoneNumber) + `(\\[[a-zA-Z]{2}])?$`
-		if validPhoneNumber && !service.userRepo.IsUniqueRexp("phone_number", phoneNumberPattern) {
+		if validPhoneNumber && !service.userRepo.IsUniqueRegx("phone_number", phoneNumberPattern) {
 			errMap["phone_number"] = errors.New("phone number already exists")
 		}
 	} else {
 		// Meaning trying to update user
 		prevProfile, _ := service.userRepo.Find(opUser.UserID)
 
-		// checking uniquness only for email that isn't identical to the user's previous email
+		// checking uniqueness only for email that isn't identical to the user's previous email
 		if validEmail && prevProfile.Email != opUser.Email {
 			if !service.userRepo.IsUnique("email", opUser.Email) {
 				errMap["email"] = errors.New("email address already exists")
@@ -149,7 +149,7 @@ func (service *Service) ValidateUserProfile(opUser *entity.User) entity.ErrMap {
 		if validPhoneNumber &&
 			tools.OnlyPhoneNumber(prevProfile.PhoneNumber) != tools.OnlyPhoneNumber(opUser.PhoneNumber) {
 			phoneNumberPattern := `^` + tools.EscapeRegexpForDatabase(phoneNumber) + `(\\[[a-zA-Z]{2}])?$`
-			if !service.userRepo.IsUniqueRexp("phone_number", phoneNumberPattern) {
+			if !service.userRepo.IsUniqueRegx("phone_number", phoneNumberPattern) {
 				errMap["phone_number"] = errors.New("phone number already exists")
 			}
 		}
@@ -167,7 +167,7 @@ func (service *Service) FindUser(identifier string) (*entity.User, error) {
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("no user found")
 	}
 
 	opUser, err := service.userRepo.Find(identifier)
@@ -183,7 +183,7 @@ func (service *Service) FindUserAlsoWPhone(identifier string, lb *entity.Localiz
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("no user found")
 	}
 
 	phoneNumber := tools.OnlyPhoneNumber(identifier)
@@ -199,9 +199,9 @@ func (service *Service) FindUserAlsoWPhone(identifier string, lb *entity.Localiz
 		}
 	} else {
 		// Localizing phone number
-		splitedIdentifier := strings.Split(identifier, "")
-		if splitedIdentifier[0] == "0" && len(splitedIdentifier) == 10 {
-			phoneNumber = "+251" + strings.Join(splitedIdentifier[1:], "")
+		splitIdentifier := strings.Split(identifier, "")
+		if splitIdentifier[0] == "0" && len(splitIdentifier) == 10 {
+			phoneNumber = "+251" + strings.Join(splitIdentifier[1:], "")
 		}
 	}
 

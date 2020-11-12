@@ -32,8 +32,8 @@ func (service *Service) AddLinkedAccount(newLinkedAccount *entity.LinkedAccount)
 // Incase if the database constraint doesn't work
 func (service *Service) VerifyToLink(linkedAccount *entity.LinkedAccount) error {
 
-	linkeAccounts := service.linkedAccountRepo.Search("account_id", linkedAccount.AccountID)
-	for _, account := range linkeAccounts {
+	linkedAccounts := service.linkedAccountRepo.Search("account_id", linkedAccount.AccountID)
+	for _, account := range linkedAccounts {
 		if account.AccountProviderID == linkedAccount.AccountProviderID {
 			return errors.New("account has been already linked to OnePay user")
 		}
@@ -47,7 +47,7 @@ func (service *Service) FindLinkedAccount(identifier string) (*entity.LinkedAcco
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("linked account not found")
 	}
 
 	linkedAccount, err := service.linkedAccountRepo.Find(identifier)

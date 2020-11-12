@@ -15,7 +15,7 @@ func Marshal(data interface{}, format string) ([]byte, error) {
 
 		dataType := reflect.TypeOf(data)
 
-		// since xml doesn't marshal maps, we made our's
+		// since xml doesn't marshal maps, we made ours
 		if dataType.String() == "map[string]string" {
 
 			obj, ok := data.(map[string]string)
@@ -47,13 +47,13 @@ func Marshal(data interface{}, format string) ([]byte, error) {
 }
 
 // MarshalIndent is a function that marshal a given data with indentation to a needed format
-func MarshalIndent(data interface{}, prefix, identation string, format string) ([]byte, error) {
+func MarshalIndent(data interface{}, prefix, indentation string, format string) ([]byte, error) {
 
 	if format == "xml" {
 
 		dataType := reflect.TypeOf(data)
 
-		// since xml doesn't marshal maps, we made our's
+		// since xml doesn't marshal maps, we made ours
 		if dataType.String() == "map[string]string" {
 
 			obj, ok := data.(map[string]string)
@@ -64,14 +64,14 @@ func MarshalIndent(data interface{}, prefix, identation string, format string) (
 			output := prefix + "<result>\n"
 			for key, value := range obj {
 				formatableString := "%s%s<%s>%s</%s>\n"
-				output = fmt.Sprintf(output+formatableString, prefix, identation, key, value, key)
+				output = fmt.Sprintf(output+formatableString, prefix, indentation, key, value, key)
 			}
 			output += prefix + "</result>"
 
 			return []byte(output), nil
 		}
 
-		output, err := xml.MarshalIndent(data, prefix, identation)
+		output, err := xml.MarshalIndent(data, prefix, indentation)
 		if err != nil {
 			panic(err)
 		}
@@ -80,5 +80,5 @@ func MarshalIndent(data interface{}, prefix, identation string, format string) (
 	}
 
 	// json is the standard marshal unit
-	return json.MarshalIndent(data, prefix, identation)
+	return json.MarshalIndent(data, prefix, indentation)
 }

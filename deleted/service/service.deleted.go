@@ -11,7 +11,7 @@ import (
 	"github.com/Benyam-S/onepay/tools"
 )
 
-// Service is a struct that defines a service that manages deleted structs
+// Service is a struct that defines a service that manages deleted struct
 type Service struct {
 	deletedUserRepo          deleted.IDeletedUserRepository
 	deletedLinkedAccountRepo deleted.IDeletedLinkedAccountRepository
@@ -92,7 +92,7 @@ func (service *Service) FindDeletedUser(identifier string) (*entity.DeletedUser,
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("no deleted user found")
 	}
 
 	deletedUser, err := service.deletedUserRepo.Find(identifier)
@@ -107,7 +107,7 @@ func (service *Service) FindDeletedLinkedAccount(identifier string) (*entity.Del
 
 	empty, _ := regexp.MatchString(`^\s*$`, identifier)
 	if empty {
-		return nil, errors.New("empty identifier used")
+		return nil, errors.New("no deleted linked account found")
 	}
 
 	deletedLinkedAccount, err := service.deletedLinkedAccountRepo.Find(identifier)
@@ -190,7 +190,7 @@ func (service *Service) SearchMultipleDeletedLinkedAccounts(key string, pageNum 
 	return service.deletedLinkedAccountRepo.SearchMultiple(key, pageNum, columns...)
 }
 
-// FreezeUser is a method that freezs a certain user account
+// FreezeUser is a method that freezes a certain user account
 func (service *Service) FreezeUser(userID, reason string) error {
 
 	empty, _ := regexp.MatchString(`^\s*$`, reason)
@@ -219,7 +219,7 @@ func (service *Service) UserIsFrozen(userID string) bool {
 	return true
 }
 
-// UnfreezeUser is a method that unfreezs a certain user account
+// UnfreezeUser is a method that unfreezes a certain user account
 func (service *Service) UnfreezeUser(userID string) (*entity.FrozenUser, error) {
 
 	frozenOPUser, err := service.frozenUserRepo.Delete(userID)
@@ -229,7 +229,7 @@ func (service *Service) UnfreezeUser(userID string) (*entity.FrozenUser, error) 
 	return frozenOPUser, nil
 }
 
-// FreezeClient is a method that freezs a certain api client
+// FreezeClient is a method that freezes a certain api client
 func (service *Service) FreezeClient(apiKey, reason string) error {
 
 	empty, _ := regexp.MatchString(`^\s*$`, reason)
@@ -258,7 +258,7 @@ func (service *Service) ClientIsFrozen(apiKey string) bool {
 	return true
 }
 
-// UnfreezeClient is a method that unfreezs a certain api client
+// UnfreezeClient is a method that unfreezes a certain api client
 func (service *Service) UnfreezeClient(apiKey string) (*entity.FrozenClient, error) {
 
 	frozenClient, err := service.frozenClientRepo.Delete(apiKey)

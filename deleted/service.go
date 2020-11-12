@@ -2,7 +2,7 @@ package deleted
 
 import "github.com/Benyam-S/onepay/entity"
 
-// IService is a method that defines all the service methods for managing deleted structs
+// IService is a method that defines all the service methods for managing deleted struct
 type IService interface {
 	AddUserToTrash(opUser *entity.User) error
 	AddStaffToTrash(staffMember *entity.Staff) error
