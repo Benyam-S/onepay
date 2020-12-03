@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -38,6 +39,7 @@ func (handler *UserAPIHandler) HandleCreateWebsocket(w http.ResponseWriter, r *h
 	go func() {
 		for {
 			time.Sleep(time.Second * 60)
+			fmt.Println(handler.activeSocketChannels)
 			err = ws.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(time.Second*50))
 			if err != nil {
 				closeChannel <- true

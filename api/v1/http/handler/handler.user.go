@@ -229,6 +229,34 @@ func (handler *UserAPIHandler) HandleGetProfile(w http.ResponseWriter, r *http.R
 
 }
 
+// HandleGetUserPreference is a handler func that handles a request for getting or viewing user's preference
+func (handler *UserAPIHandler) HandleGetUserPreference(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+	opUser, ok := ctx.Value(entity.Key("onepay_user")).(*entity.User)
+
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	format := mux.Vars(r)["format"]
+
+	userPreference, err := handler.uService.FindUserPreference(opUser.UserID)
+	if err != nil {
+		output, _ := tools.MarshalIndent(ErrorBody{Error: err.Error()}, "", "\t", format)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
+		return
+	}
+
+	output, _ := tools.MarshalIndent(userPreference, "", "\t", format)
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+	return
+
+}
+
 // HandleGetUser is a handler func that handles a request for getting or viewing user's profile
 // This method can be a little controversial because it allow users to view other's profile,
 // Solved the problem by deducting unnecessary values
@@ -308,7 +336,7 @@ func (handler *UserAPIHandler) HandleGetAccountStatement(w http.ResponseWriter, 
 	}
 
 	wd, _ := os.Getwd()
-	filePath := filepath.Join(wd, "./assets/temp", location)
+	filePath := filepath.Join(wd, "./assets/statements", location)
 	http.ServeFile(w, r, filePath)
 
 }

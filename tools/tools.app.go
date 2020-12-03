@@ -15,7 +15,7 @@ func ClosingStatement(opUser *entity.Staff, histories []*entity.UserHistory,
 
 	fileName := opUser.UserID + "_" + GenerateRandomString(7) + ".txt"
 	wd, _ := os.Getwd()
-	filePath := filepath.Join(wd, "./assets/temp", fileName)
+	filePath := filepath.Join(wd, "./assets/statements", fileName)
 	file, err := os.Create(filePath)
 	if err != nil {
 		return "", err

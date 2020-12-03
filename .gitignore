@@ -1,4 +1,5 @@
 OnePay.session.sql
 playground
 config
-assets/temp
+assets/statements
+assets/currency

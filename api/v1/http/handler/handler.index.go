@@ -24,3 +24,8 @@ type NotifierContainer struct {
 	Type string
 	Body interface{}
 }
+
+// NotificationContainer is a struct that holds all the new use notification
+type NotificationContainer struct {
+	Histories []*entity.UserHistory
+}

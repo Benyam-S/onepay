@@ -172,6 +172,17 @@ type MessageTemp struct {
 	Subject string
 }
 
+// CurrencyRate is a struct that defines a single currency rate/exchange value
+type CurrencyRate struct {
+	FromSymbol   string
+	FromName     string
+	ToSymbol     string
+	ToName       string
+	CurrentValue float64
+	Values       []float64
+	Dates        []time.Time
+}
+
 // Key is a type that defines a key type that can be used a key value in context
 type Key string
 

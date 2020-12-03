@@ -17,6 +17,7 @@ func Start(handler *handler.UserAPIHandler, router *mux.Router) {
 	linkedAccountRoutes(handler, router)
 	moneyTokenRoutes(handler, router)
 	websocketRoutes(handler, router)
+	extraRoutes(handler, router)
 
 }
 
@@ -36,6 +37,9 @@ func userRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
 
 	router.HandleFunc("/api/v1/oauth/user/profile.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetProfile, handler.Authorization,
+		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
+
+	router.HandleFunc("/api/v1/oauth/user/profile/preference.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetUserPreference, handler.Authorization,
 		handler.AuthenticateScope, handler.AccessTokenAuthentication)).Methods("GET")
 
 	// router.HandleFunc("/api/v1/oauth/user/profile.{format:json|xml}", tools.MiddlewareFactory(handler.HandleUpdateProfile, handler.Authorization,
@@ -225,4 +229,13 @@ func websocketRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
 
 	router.HandleFunc("/api/v1/listener/history", handler.HandleListenToHistoryChange).Methods("PUT")
 
+}
+
+func extraRoutes(handler *handler.UserAPIHandler, router *mux.Router) {
+
+	router.HandleFunc("/api/v1/oauth/currency/rates/{base}.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetCurrencyRates, handler.Authorization,
+		handler.AccessTokenAuthentication)).Methods("GET")
+
+	router.HandleFunc("/api/v1/oauth/user/notifications.{format:json|xml}", tools.MiddlewareFactory(handler.HandleGetNotifications, handler.Authorization,
+		handler.AccessTokenAuthentication)).Methods("GET")
 }
