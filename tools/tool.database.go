@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"context"
 	"errors"
 	"time"
 
@@ -10,8 +9,9 @@ import (
 
 // SetValue is a function that adds a key value pair to a redis database
 func SetValue(redisClient *redis.Client, key string, value string, expiry time.Duration) error {
-	ctx := context.Background()
-	err := redisClient.Set(ctx, key, value, expiry).Err()
+	// ctx := context.Background()
+	// err := redisClient.Set(ctx, key, value, expiry).Err()
+	err := redisClient.Set(key, value, expiry).Err()
 	if err != nil {
 		return err
 	}
@@ -22,8 +22,9 @@ func SetValue(redisClient *redis.Client, key string, value string, expiry time.D
 func GetValue(redisClient *redis.Client, key string) (string, error) {
 	// should refine and analyze the key
 
-	ctx := context.Background()
-	value, err := redisClient.Get(ctx, key).Result()
+	// ctx := context.Background()
+	// value, err := redisClient.Get(ctx, key).Result()
+	value, err := redisClient.Get(key).Result()
 	if err != nil {
 		return "", err
 	}
@@ -32,8 +33,9 @@ func GetValue(redisClient *redis.Client, key string) (string, error) {
 
 // RemoveValues is a function that removes a key value pair from a redis database
 func RemoveValues(redisClient *redis.Client, key ...string) {
-	ctx := context.Background()
-	redisClient.Del(ctx, key...)
+	// ctx := context.Background()
+	// redisClient.Del(ctx, key...)
+	redisClient.Del(key...)
 }
 
 // AnalyzeKeyValuePair is a function that cross checks the given key value pair with the stored one

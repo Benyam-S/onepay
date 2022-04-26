@@ -9,7 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "C:\\Users\\Administrator\\go\\src\\github.com\\Benyam-S\\onepay\\main.go",
+            "program": "/Users/administrator/go/src/github.com/Benyam-S/onepay/main.go",
             "env": {},
             "args": []
         }
